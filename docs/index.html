@@ -74,25 +74,58 @@
     </main>
 
     <script type="module">
-        import { animate, stagger, hover } from "https://cdn.jsdelivr.net/npm/motion@14.13.0/+esm";
+        import { animate, stagger, hover, press } from "https://cdn.jsdelivr.net/npm/motion@14.13.0/+esm";
 
-        // タイトル：上からフェードイン
-        animate("h1", { opacity: [0, 1], y: [-20, 0] }, { duration: 0.8 });
+        // ===== タイトル：1文字ずつ分解して飛び込ませる =====
+        const h1 = document.querySelector("h1");
+        h1.innerHTML = [...h1.textContent]
+            .map((c) => `<span style="display:inline-block;opacity:0">${c}</span>`)
+            .join("");
+        h1.style.opacity = 1;
 
-        // 見出し：少し遅れて表示
-        animate("h2", { opacity: [0, 1] }, { delay: 0.4, duration: 0.6 });
-
-        // 日記：左から1つずつ順番に表示
         animate(
-            "p",
-            { opacity: [0, 1], x: [-30, 0] },
-            { delay: stagger(0.15, { startDelay: 0.6 }), duration: 0.5 }
+            "h1 span",
+            { opacity: [0, 1], y: [-120, 0], rotate: [-180, 0], scale: [0.2, 1] },
+            { type: "spring", bounce: 0.6, duration: 1, delay: stagger(0.05) }
         );
 
-        // 日記：マウスを乗せると右にずれる（バネの動き）
+        // タイトル：登場後、文字が波打ち続ける
+        animate(
+            "h1 span",
+            { y: [0, -14, 0] },
+            { duration: 0.5, repeat: Infinity, repeatDelay: 1.2, delay: stagger(0.05, { startDelay: 2.5 }) }
+        );
+
+        // ===== 見出し：横から勢いよくスライド =====
+        animate(
+            "h2",
+            { opacity: [0, 1], x: [-250, 0], scale: [1.6, 1], rotate: [-15, 0] },
+            { type: "spring", bounce: 0.55, duration: 0.9, delay: 0.8 }
+        );
+
+        // ===== 日記：左右交互に回転しながら突っ込んでくる =====
+        document.querySelectorAll("p").forEach((el, i) => {
+            const dir = i % 2 === 0 ? -1 : 1;
+            animate(
+                el,
+                { opacity: [0, 1], x: [400 * dir, 0], rotate: [30 * dir, 0], scale: [0.5, 1] },
+                { type: "spring", bounce: 0.5, duration: 1, delay: 1.2 + i * 0.25 }
+            );
+        });
+
+        // 日記：ホバーで拡大＆傾く
         hover("p", (el) => {
-            animate(el, { x: 8 }, { type: "spring", stiffness: 300 });
-            return () => animate(el, { x: 0 }, { type: "spring", stiffness: 300 });
+            animate(el, { scale: 1.08, rotate: -2, x: 10 }, { type: "spring", stiffness: 400, damping: 8 });
+            return () => animate(el, { scale: 1, rotate: 0, x: 0 }, { type: "spring", stiffness: 400, damping: 8 });
+        });
+
+        // 日記：クリックでブルブル震える
+        press("p", (el) => {
+            animate(
+                el,
+                { x: [0, -14, 14, -10, 10, -5, 5, 0], rotate: [0, -4, 4, -3, 3, 0] },
+                { duration: 0.5 }
+            );
         });
     </script>
 </body>
