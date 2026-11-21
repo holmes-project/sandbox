@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>棒ラーメンのすすめ｜マルタイ棒ラーメン ファンページ</title>
+    <style>
+        :root {
+            --yellow: #ffcc1f;
+            --yellow-deep: #f5a400;
+            --red: #d7261e;
+            --brown: #3a2414;
+            --cream: #fff8e6;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            background: var(--cream);
+            color: var(--brown);
+            font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+            line-height: 1.8;
+            overflow-x: hidden;
+        }
+
+        /* スクロール進捗バー */
+        .progress {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 6px;
+            background: var(--red);
+            transform-origin: 0 50%;
+            transform: scaleX(0);
+            z-index: 100;
+        }
+
+        /* ナビ */
+        nav {
+            position: fixed;
+            top: 6px; left: 0; right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px;
+            z-index: 90;
+        }
+        nav a {
+            padding: 6px 16px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(6px);
+            border-radius: 999px;
+            color: var(--brown);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        section { padding: 100px 20px; }
+
+        .inner { max-width: 960px; margin: 0 auto; }
+
+        .section-title {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 5vw, 2.6rem);
+            text-align: center;
+            font-weight: 900;
+        }
+        .section-lead {
+            margin: 0 auto 56px;
+            max-width: 560px;
+            text-align: center;
+        }
+
+        /* ===== ヒーロー ===== */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background:
+                radial-gradient(circle at 50% 60%, #ffe27a 0%, var(--yellow) 45%, var(--yellow-deep) 100%);
+            overflow: hidden;
+        }
+
+        /* 背景に流れる麺の線 */
+        .noodle-line {
+            position: absolute;
+            left: -10%;
+            width: 120%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 3px;
+        }
+
+        .hero-sub {
+            margin: 0 0 8px;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            color: var(--red);
+        }
+
+        .hero h1 {
+            margin: 0;
+            font-size: clamp(3rem, 13vw, 7.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            color: var(--brown);
+            text-shadow: 6px 6px 0 var(--white);
+        }
+        .hero h1 span { display: inline-block; }
+
+        .hero-copy {
+            margin: 20px 0 0;
+            font-size: clamp(1rem, 3vw, 1.3rem);
+            font-weight: 700;
+        }
+
+        .bowl {
+            width: min(320px, 70vw);
+            margin-top: 24px;
+        }
+        .steam path {
+            fill: none;
+            stroke: var(--white);
+            stroke-width: 6;
+            stroke-linecap: round;
+            opacity: 0.8;
+        }
+
+        .scroll-hint {
+            position: absolute;
+            bottom: 24px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+        }
+
+        /* ===== 特徴 ===== */
+        .features { background: var(--white); }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+        }
+        .card {
+            padding: 32px 24px;
+            background: var(--cream);
+            border: 3px solid var(--brown);
+            border-radius: 20px;
+            box-shadow: 8px 8px 0 var(--yellow);
+            text-align: center;
+        }
+        .card-icon { font-size: 3rem; }
+        .card h3 { margin: 8px 0; font-size: 1.3rem; }
+        .card p { margin: 0; font-size: 0.95rem; }
+
+        /* ===== 数字 ===== */
+        .numbers {
+            background: var(--red);
+            color: var(--white);
+        }
+        .number-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            text-align: center;
+        }
+        .num {
+            font-size: clamp(3rem, 10vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1;
+        }
+        .num small { font-size: 0.35em; margin-left: 4px; }
+        .num-label { margin-top: 8px; font-weight: 700; }
+
+        /* ===== 歴史 ===== */
+        .timeline {
+            position: relative;
+            max-width: 640px;
+            margin: 0 auto;
+            padding-left: 40px;
+        }
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 12px; top: 0; bottom: 0;
+            width: 4px;
+            background: var(--yellow-deep);
+            border-radius: 2px;
+        }
+        .event {
+            position: relative;
+            margin-bottom: 32px;
+            padding: 20px 24px;
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(58, 36, 20, 0.1);
+        }
+        .event::before {
+            content: "";
+            position: absolute;
+            left: -36px; top: 26px;
+            width: 20px; height: 20px;
+            background: var(--red);
+            border: 4px solid var(--cream);
+            border-radius: 50%;
+        }
+        .event-year {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--red);
+        }
+        .event p { margin: 4px 0 0; }
+
+        /* ===== 作り方 ===== */
+        .howto { background: var(--yellow); }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            counter-reset: step;
+        }
+        .step {
+            position: relative;
+            padding: 48px 20px 24px;
+            background: var(--white);
+            border-radius: 20px;
+            text-align: center;
+        }
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            top: -22px; left: 50%;
+            transform: translateX(-50%);
+            width: 48px; height: 48px;
+            display: grid;
+            place-items: center;
+            background: var(--brown);
+            color: var(--yellow);
+            border-radius: 50%;
+            font-size: 1.4rem;
+            font-weight: 900;
+        }
+        .step h3 { margin: 0 0 4px; }
+        .step p { margin: 0; font-size: 0.95rem; }
+
+        /* ===== アレンジ ===== */
+        .toppings {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 14px;
+        }
+        .topping {
+            padding: 12px 22px;
+            background: var(--white);
+            border: 3px solid var(--brown);
+            border-radius: 999px;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* ===== CTA ===== */
+        .cta {
+            background: var(--brown);
+            color: var(--white);
+            text-align: center;
+        }
+        .cta h2 {
+            margin: 0 0 16px;
+            font-size: clamp(2rem, 7vw, 3.4rem);
+            font-weight: 900;
+        }
+        .cta-btn {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 18px 48px;
+            background: var(--yellow);
+            color: var(--brown);
+            border-radius: 999px;
+            font-size: 1.2rem;
+            font-weight: 900;
+            text-decoration: none;
+        }
+
+        footer {
+            padding: 24px 20px;
+            background: #24160c;
+            color: #bfa98f;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* JSで動かす要素は最初は隠しておく */
+        .reveal { opacity: 0; }
+
+        /* 動きを減らす設定の人には全部表示するだけにする */
+        @media (prefers-reduced-motion: reduce) {
+            .reveal { opacity: 1 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress"></div>
+
+    <nav>
+        <a href="#features">特徴</a>
+        <a href="#history">歴史</a>
+        <a href="#howto">作り方</a>
+        <a href="#arrange">アレンジ</a>
+    </nav>
+
+    <!-- ヒーロー -->
+    <header class="hero">
+        <div class="noodle-line" style="top: 15%"></div>
+        <div class="noodle-line" style="top: 30%"></div>
+        <div class="noodle-line" style="top: 70%"></div>
+        <div class="noodle-line" style="top: 85%"></div>
+
+        <p class="hero-sub reveal">SINCE 1959 ／ FUKUOKA</p>
+        <h1 id="hero-title">棒ラーメン</h1>
+        <p class="hero-copy reveal">まっすぐな麺に、まっすぐな旨さ。</p>
+
+        <svg class="bowl reveal" viewBox="0 0 320 260" aria-hidden="true">
+            <g class="steam">
+                <path d="M110 90 q-15 -20 0 -40 q15 -20 0 -40" />
+                <path d="M160 90 q-15 -20 0 -40 q15 -20 0 -40" />
+                <path d="M210 90 q-15 -20 0 -40 q15 -20 0 -40" />
+            </g>
+            <!-- 箸 -->
+            <g class="chopsticks">
+                <rect x="190" y="40" width="10" height="150" rx="5" fill="#8b5a2b" transform="rotate(25 195 115)" />
+                <rect x="210" y="40" width="10" height="150" rx="5" fill="#a0692f" transform="rotate(32 215 115)" />
+            </g>
+            <!-- どんぶり -->
+            <ellipse cx="160" cy="120" rx="140" ry="26" fill="#f3d27a" />
+            <path d="M20 120 Q160 150 300 120 Q290 230 160 240 Q30 230 20 120 Z" fill="#d7261e" />
+            <path d="M40 160 Q160 185 280 160" stroke="#ffffff" stroke-width="5" fill="none" opacity="0.6" />
+            <ellipse cx="160" cy="120" rx="140" ry="26" fill="none" stroke="#3a2414" stroke-width="4" />
+            <!-- 具 -->
+            <circle cx="115" cy="116" r="16" fill="#ffffff" />
+            <circle cx="115" cy="116" r="8" fill="#ffb300" />
+            <rect x="140" y="104" width="34" height="20" rx="4" fill="#c97b4a" />
+            <circle cx="200" cy="120" r="6" fill="#4caf50" />
+            <circle cx="215" cy="112" r="5" fill="#4caf50" />
+            <circle cx="188" cy="110" r="5" fill="#4caf50" />
+        </svg>
+
+        <div class="scroll-hint">SCROLL ↓</div>
+    </header>
+
+    <!-- 特徴 -->
+    <section class="features" id="features">
+        <div class="inner">
+            <h2 class="section-title reveal">ここがすごい</h2>
+            <p class="section-lead reveal">棒状に束ねたまっすぐな乾麺。九州の家庭で長く愛されてきた、即席棒状麺のパイオニアです。</p>
+            <div class="cards">
+                <div class="card reveal">
+                    <div class="card-icon">🍜</div>
+                    <h3>生麺のような食感</h3>
+                    <p>油で揚げず、蒸しもしない製法。ストレート麺ならではの、つるっとした口当たり。</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🥢</div>
+                    <h3>1袋で2人前</h3>
+                    <p>スリムな袋に麺2束とスープが入っています。かさばらないので、ストックにもアウトドアにも。</p>
+                </div>
+                <div class="card reveal">
+                    <div class="card-icon">🍲</div>
+                    <h3>あっさり醤油スープ</h3>
+                    <p>ポークとチキンをベースにした、飽きのこない味。トッピング次第でいろいろな味に変わります。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 数字 -->
+    <section class="numbers">
+        <div class="inner number-grid">
+            <div>
+                <div class="num"><span class="count" data-to="1959">0</span><small>年</small></div>
+                <div class="num-label">発売開始</div>
+            </div>
+            <div>
+                <div class="num"><span class="count" data-to="2">0</span><small>人前</small></div>
+                <div class="num-label">1袋あたり</div>
+            </div>
+            <div>
+                <div class="num"><span class="count" data-to="3">0</span><small>分</small></div>
+                <div class="num-label">ゆで時間の目安</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 歴史 -->
+    <section id="history">
+        <div class="inner">
+            <h2 class="section-title reveal">ものがたり</h2>
+            <p class="section-lead reveal">戦後の福岡から始まった、まっすぐな麺の歩み。</p>
+            <div class="timeline">
+                <div class="event reveal">
+                    <div class="event-year">1947</div>
+                    <p>福岡市で創業。「地元の人のお腹を満たしたい」という思いから製麺業をスタート。</p>
+                </div>
+                <div class="event reveal">
+                    <div class="event-year">1959</div>
+                    <p>「マルタイラーメン」発売。ほかにない、まっすぐな棒状の即席麺が誕生。</p>
+                </div>
+                <div class="event reveal">
+                    <div class="event-year">1960〜</div>
+                    <p>注文が殺到して工場を増設。九州の家庭の味として定着していく。</p>
+                </div>
+                <div class="event reveal">
+                    <div class="event-year">いま</div>
+                    <p>醤油とんこつ、屋台とんこつ、ごましょうゆなど、味のバリエーションも豊富に。全国にファンが広がっています。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 作り方 -->
+    <section class="howto" id="howto">
+        <div class="inner">
+            <h2 class="section-title reveal">作り方はかんたん</h2>
+            <p class="section-lead reveal">分量はパッケージの表示に合わせてください。</p>
+            <div class="steps">
+                <div class="step reveal">
+                    <h3>お湯を沸かす</h3>
+                    <p>鍋にお湯をたっぷり沸かします。</p>
+                </div>
+                <div class="step reveal">
+                    <h3>麺を入れる</h3>
+                    <p>棒状の麺を1束入れて、約3分ゆでます。</p>
+                </div>
+                <div class="step reveal">
+                    <h3>スープを溶かす</h3>
+                    <p>火を止めて、スープと調味油を加えます。</p>
+                </div>
+                <div class="step reveal">
+                    <h3>いただきます</h3>
+                    <p>どんぶりに移して、好きな具をのせれば完成。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- アレンジ -->
+    <section id="arrange">
+        <div class="inner">
+            <h2 class="section-title reveal">トッピングで化ける</h2>
+            <p class="section-lead reveal">あっさりスープだから、どんな具とも相性抜群。タップしてみてください。</p>
+            <div class="toppings">
+                <div class="topping reveal">🥚 半熟たまご</div>
+                <div class="topping reveal">🧅 ねぎ山盛り</div>
+                <div class="topping reveal">🥓 チャーシュー</div>
+                <div class="topping reveal">🌶️ 紅しょうが</div>
+                <div class="topping reveal">🧄 にんにく</div>
+                <div class="topping reveal">🥬 もやし炒め</div>
+                <div class="topping reveal">🧈 バター</div>
+                <div class="topping reveal">🌿 のり</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="inner">
+            <h2 class="reveal">今夜は、棒ラーメン。</h2>
+            <p class="reveal">スーパーやネットショップで手に入ります。</p>
+            <a class="cta-btn reveal" href="#top" id="cta-btn">もう一度見る ↑</a>
+        </div>
+    </section>
+
+    <footer>
+        このページは棒ラーメンのファンが作った非公式の紹介ページです。株式会社マルタイとは関係ありません。
+    </footer>
+
+    <script type="module">
+        import { animate, stagger, hover, press, inView, scroll } from "https://cdn.jsdelivr.net/npm/motion@14.13.0/+esm";
+
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        // ===== スクロール進捗バー =====
+        scroll(animate(".progress", { scaleX: [0, 1] }, { ease: "linear" }));
+
+        if (!reduce) {
+            // ===== ヒーロー：タイトルを1文字ずつ落とす =====
+            const title = document.getElementById("hero-title");
+            title.innerHTML = [...title.textContent].map((c) => `<span>${c}</span>`).join("");
+
+            animate(
+                "#hero-title span",
+                { opacity: [0, 1], y: [-200, 0], rotate: [-45, 0], scale: [2, 1] },
+                { type: "spring", bounce: 0.55, duration: 1, delay: stagger(0.1) }
+            );
+
+            animate(".hero-sub", { opacity: [0, 1], y: [20, 0] }, { delay: 0.6 });
+            animate(".hero-copy", { opacity: [0, 1], y: [20, 0] }, { delay: 1.1 });
+
+            // どんぶり：下から跳ねて登場
+            animate(
+                ".bowl",
+                { opacity: [0, 1], y: [200, 0], scale: [0.5, 1] },
+                { type: "spring", bounce: 0.5, duration: 1.2, delay: 1.3 }
+            );
+
+            // 湯気：ゆらゆら上がり続ける
+            animate(
+                ".steam path",
+                { y: [0, -14, 0], opacity: [0.2, 0.9, 0.2] },
+                { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: stagger(0.4, { startDelay: 2 }) }
+            );
+
+            // 箸：麺をすくうように上下
+            animate(
+                ".chopsticks",
+                { y: [0, -18, 0], rotate: [0, -4, 0] },
+                { duration: 1.6, repeat: Infinity, repeatDelay: 0.6, ease: "easeInOut", delay: 2.5 }
+            );
+
+            // 背景の麺の線：左右に流れ続ける
+            document.querySelectorAll(".noodle-line").forEach((line, i) => {
+                const dir = i % 2 === 0 ? 1 : -1;
+                animate(
+                    line,
+                    { x: [-60 * dir, 60 * dir] },
+                    { duration: 4 + i, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }
+                );
+            });
+
+            animate(".scroll-hint", { y: [0, 10, 0] }, { duration: 1.4, repeat: Infinity, delay: 2.5 });
+
+            // ===== 見出し・リード文：画面に入ったら表示 =====
+            inView(".section-title, .section-lead, .cta h2, .cta p", (el) => {
+                animate(el, { opacity: [0, 1], y: [40, 0] }, { duration: 0.7, ease: "easeOut" });
+            }, { amount: 0.5 });
+
+            // 特徴カード：回転しながら跳ねて登場
+            inView(".cards", (el) => {
+                animate(
+                    el.querySelectorAll(".card"),
+                    { opacity: [0, 1], y: [120, 0], rotate: [10, 0], scale: [0.7, 1] },
+                    { type: "spring", bounce: 0.5, duration: 1, delay: stagger(0.15) }
+                );
+            }, { amount: 0.3 });
+
+            // 年表：左からスライド
+            inView(".event", (el) => {
+                animate(el, { opacity: [0, 1], x: [-80, 0] }, { type: "spring", bounce: 0.4, duration: 0.8 });
+            }, { amount: 0.5 });
+
+            // 作り方：順番にポップ
+            inView(".steps", (el) => {
+                animate(
+                    el.querySelectorAll(".step"),
+                    { opacity: [0, 1], scale: [0.3, 1], rotate: [-15, 0] },
+                    { type: "spring", bounce: 0.6, duration: 0.9, delay: stagger(0.15) }
+                );
+            }, { amount: 0.3 });
+
+            // トッピング：ばらばらに飛び込む
+            inView(".toppings", (el) => {
+                el.querySelectorAll(".topping").forEach((t, i) => {
+                    animate(
+                        t,
+                        {
+                            opacity: [0, 1],
+                            x: [(Math.random() - 0.5) * 400, 0],
+                            y: [(Math.random() - 0.5) * 300, 0],
+                            rotate: [(Math.random() - 0.5) * 180, 0],
+                        },
+                        { type: "spring", bounce: 0.5, duration: 1, delay: i * 0.07 }
+                    );
+                });
+            }, { amount: 0.3 });
+
+            // CTAボタン：登場後に鼓動
+            inView(".cta-btn", (el) => {
+                animate(el, { opacity: [0, 1], scale: [0, 1] }, { type: "spring", bounce: 0.6, duration: 0.8 });
+                animate(el, { scale: [1, 1.08, 1] }, { duration: 1.2, repeat: Infinity, delay: 1 });
+            }, { amount: 0.8 });
+        } else {
+            document.querySelectorAll(".reveal").forEach((el) => (el.style.opacity = 1));
+        }
+
+        // ===== 数字のカウントアップ =====
+        inView(".number-grid", () => {
+            document.querySelectorAll(".count").forEach((el) => {
+                const to = Number(el.dataset.to);
+                const from = to > 100 ? to - 60 : 0;
+                animate(from, to, {
+                    duration: reduce ? 0 : 1.6,
+                    ease: "easeOut",
+                    onUpdate: (v) => (el.textContent = Math.round(v)),
+                });
+            });
+        }, { amount: 0.5 });
+
+        // ===== ホバー・クリック =====
+        hover(".card", (el) => {
+            animate(el, { y: -10, rotate: -1.5 }, { type: "spring", stiffness: 400, damping: 12 });
+            return () => animate(el, { y: 0, rotate: 0 }, { type: "spring", stiffness: 400, damping: 12 });
+        });
+
+        hover(".topping", (el) => {
+            animate(el, { scale: 1.12 }, { type: "spring", stiffness: 500, damping: 10 });
+            return () => animate(el, { scale: 1 }, { type: "spring", stiffness: 500, damping: 10 });
+        });
+
+        // トッピングをタップ：色が変わってぴょんと跳ねる
+        press(".topping", (el) => {
+            const on = el.dataset.on === "1";
+            el.dataset.on = on ? "0" : "1";
+            animate(el, {
+                y: [0, -24, 0],
+                rotate: [0, 12, -12, 0],
+                backgroundColor: on ? "#ffffff" : "#ffcc1f",
+            }, { duration: 0.5 });
+        });
+
+        // どんぶりをクリック：ブルブル
+        press(".bowl", (el) => {
+            animate(el, { rotate: [0, -8, 8, -6, 6, -3, 3, 0], scale: [1, 1.1, 1] }, { duration: 0.6 });
+        });
+
+        // CTAボタン：ページ先頭へ
+        document.getElementById("cta-btn").addEventListener("click", (e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    </script>
+</body>
+</html>
