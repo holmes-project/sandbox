@@ -34,7 +34,7 @@
         }
 
         h2 {
-            margin: 0 0 16px;
+            margin: 32px 0 16px;
             padding-left: 12px;
             font-size: 1.3rem;
             border-left: 5px solid #c08552;
@@ -49,8 +49,30 @@
             cursor: default;
         }
 
+        /* 講義リンク */
+        .lecture-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            background: #6b4226;
+            color: #fffaf3;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .lecture-link .no {
+            padding: 2px 10px;
+            background: #c08552;
+            border-radius: 999px;
+            font-size: 0.85rem;
+        }
+        .lecture-link .arrow {
+            margin-left: auto;
+        }
+
         /* アニメーション前のちらつき防止 */
-        h1, h2, p {
+        h1, h2, p, .lecture-link {
             opacity: 0;
         }
 
@@ -68,6 +90,14 @@
 <body>
     <main>
         <h1>これはホームズプロジェクトです。</h1>
+
+        <h2>講義</h2>
+        <a class="lecture-link" href="lectures/001_static-web-loading.html">
+            <span class="no">001</span>
+            <span>静的Webページの読み込み</span>
+            <span class="arrow">→</span>
+        </a>
+
         <h2>日記</h2>
         <p>朝にコーヒーを飲んだ。</p>
         <p>朝にワッフルとドーナツを食べた。</p>
@@ -100,8 +130,25 @@
         animate(
             "h2",
             { opacity: [0, 1], x: [-250, 0], scale: [1.6, 1], rotate: [-15, 0] },
-            { type: "spring", bounce: 0.55, duration: 0.9, delay: 0.8 }
+            { type: "spring", bounce: 0.55, duration: 0.9, delay: stagger(0.3, { startDelay: 0.8 }) }
         );
+
+        // ===== 講義リンク：下から跳ねて登場 =====
+        animate(
+            ".lecture-link",
+            { opacity: [0, 1], y: [60, 0], scale: [0.6, 1] },
+            { type: "spring", bounce: 0.5, duration: 0.9, delay: 1.1 }
+        );
+
+        hover(".lecture-link", (el) => {
+            const arrow = el.querySelector(".arrow");
+            animate(el, { scale: 1.04 }, { type: "spring", stiffness: 400, damping: 10 });
+            animate(arrow, { x: 6 }, { type: "spring", stiffness: 400, damping: 10 });
+            return () => {
+                animate(el, { scale: 1 }, { type: "spring", stiffness: 400, damping: 10 });
+                animate(arrow, { x: 0 }, { type: "spring", stiffness: 400, damping: 10 });
+            };
+        });
 
         // ===== 日記：左右交互に回転しながら突っ込んでくる =====
         document.querySelectorAll("p").forEach((el, i) => {
@@ -109,7 +156,7 @@
             animate(
                 el,
                 { opacity: [0, 1], x: [400 * dir, 0], rotate: [30 * dir, 0], scale: [0.5, 1] },
-                { type: "spring", bounce: 0.5, duration: 1, delay: 1.2 + i * 0.25 }
+                { type: "spring", bounce: 0.5, duration: 1, delay: 1.5 + i * 0.25 }
             );
         });
 
