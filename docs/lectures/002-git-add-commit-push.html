@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>git add → commit → push の流れ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --work:#ffb547;     /* 作業ディレクトリ */
+  --stage:#2ee6a8;    /* ステージングエリア */
+  --local:#5aa2ff;    /* ローカルリポジトリ */
+  --remote:#c4a7ff;   /* GitHub */
+  --red:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(800px 560px at 560px 540px, rgba(90,162,255,.09), transparent 70%),
+    radial-gradient(560px 520px at 1640px 540px, rgba(196,167,255,.11), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:52px;right:90px;height:130px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--stage);margin-bottom:10px}
+.kicker span{color:var(--muted)}
+h1{font-family:var(--font-display);font-weight:400;font-size:74px;line-height:1.05}
+h1 em{font-style:normal;color:var(--stage)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--stage);background:#18233a}
+
+/* ===========================================
+   ROLE LABELS
+   =========================================== */
+.role{position:absolute;top:212px;display:flex;align-items:baseline;gap:16px}
+.role .tag{font-family:var(--font-code);font-weight:700;font-size:20px;padding:6px 14px;border-radius:8px;letter-spacing:.06em}
+.role .name{font-weight:900;font-size:36px}
+.role .eg{font-size:20px;color:var(--muted)}
+.role.local{left:90px}
+.role.local .tag{background:rgba(90,162,255,.15);color:var(--local)}
+.role.remote{left:1400px}
+.role.remote .tag{background:rgba(196,167,255,.16);color:var(--remote)}
+
+/* ===========================================
+   LAPTOP — ローカルPC（ノートPC）
+   =========================================== */
+.laptop{position:absolute;left:90px;top:272px;width:1090px;height:484px;border-radius:22px 22px 8px 8px;background:#1a2132;padding:14px;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.screen{position:relative;width:100%;height:100%;border-radius:12px;background:#0b101b;border:1.5px solid #222c42;overflow:hidden}
+.base{position:absolute;left:50px;top:756px;width:1170px;height:26px;border-radius:4px 4px 22px 22px;background:linear-gradient(#2a3349,#161c2a)}
+.base::after{content:'';position:absolute;left:50%;top:0;width:160px;height:10px;transform:translateX(-50%);border-radius:0 0 10px 10px;background:#0f1420}
+.laptop.done{box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 4px rgba(46,230,168,.25),0 0 60px rgba(46,230,168,.2)}
+
+/* --- 3つのエリア --- */
+.zone{position:absolute;top:14px;width:300px;height:236px;border-radius:14px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 40%,#1f2a40);padding:14px 16px;transition:box-shadow .4s,border-color .4s}
+.zone.act{border-color:var(--c);box-shadow:0 0 0 5px color-mix(in srgb,var(--c) 18%,transparent)}
+.z-work{left:16px;--c:var(--work)}
+.z-stage{left:384px;--c:var(--stage)}
+.z-local{left:752px;--c:var(--local)}
+.z-h{font-weight:900;font-size:24px;color:var(--c);display:flex;align-items:center;gap:10px}
+.z-h .ic{font-size:22px}
+.z-s{font-size:16px;color:var(--muted);margin:2px 0 10px;line-height:1.3;white-space:nowrap}
+.items{display:flex;flex-direction:column;gap:6px}
+.empty{font-size:16px;color:#4d5a77;text-align:center;padding-top:24px}
+
+/* ファイルチップ */
+.fchip{height:38px;border-radius:9px;background:#0b111e;border:1.5px solid #26324c;display:flex;align-items:center;gap:10px;padding:0 12px;font-family:var(--font-code);font-weight:700;font-size:18px;white-space:nowrap}
+.fchip .fi{width:20px;height:25px;border-radius:3px 8px 3px 3px;background:#5d6b88;flex:none}
+.fchip .mk{margin-left:auto;font-family:var(--font-body);font-size:14px;font-weight:900;padding:3px 9px;border-radius:999px;opacity:0;transform:scale(.6);transition:all .35s var(--ease)}
+.fchip .mk.on{opacity:1;transform:none}
+.mk.mod{background:rgba(255,181,71,.18);color:var(--work)}
+.fchip.st{border-color:rgba(46,230,168,.6);background:#0a1a17}
+.fchip.st .fi{background:var(--stage)}
+.fchip.dim{color:#6f7c99}
+
+/* コミットカード */
+.commit{position:relative;border-radius:10px;background:#0b1220;border:1.5px solid #2a3858;padding:8px 12px;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.commit .dotc{width:14px;height:14px;border-radius:50%;border:3px solid var(--c,var(--local));flex:none}
+.commit .id{font-family:var(--font-code);font-weight:700;font-size:16px;color:var(--c,var(--local))}
+.commit .msg{font-size:16px;font-weight:700}
+.commit .tg{position:absolute;right:-8px;top:-14px;font-size:13px;font-weight:900;padding:2px 9px;border-radius:999px;background:#3a1620;border:1px solid var(--red);color:var(--red);opacity:0;transition:opacity .3s}
+.commit .tg.on{opacity:1}
+.commit.new{border-color:var(--c,var(--local));box-shadow:0 0 18px color-mix(in srgb,var(--c,var(--local)) 30%,transparent)}
+.commit.old{opacity:.7}
+.hide{display:none!important}
+.pending{opacity:0!important}
+
+/* エリア間の矢印（コマンド名つき） */
+.arrow{position:absolute;top:96px;width:67px;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:3}
+.arrow .ar{font-size:20px;color:#3d4a68;transition:color .35s}
+.arrow.act .ar{color:var(--c)}
+.arrow .ab{font-family:var(--font-code);font-weight:700;font-size:14px;padding:5px 8px;border-radius:999px;background:#151d2e;border:1.5px solid #34415f;color:var(--muted);transition:all .35s;white-space:nowrap}
+.arrow.act .ab{background:var(--c);border-color:var(--c);color:#06120f;box-shadow:0 0 18px var(--c)}
+.a-add{left:316px;--c:var(--stage)}
+.a-commit{left:683px;--c:var(--local)}
+
+/* --- ターミナル --- */
+.term{position:absolute;left:16px;right:16px;top:262px;bottom:16px;border-radius:12px;background:#05080e;border:1.5px solid #1f293e;overflow:hidden}
+.term-bar{height:26px;background:#111827;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px;color:var(--muted)}
+.term-bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.term-bar span{margin-left:10px;font-family:var(--font-code)}
+.term-body{padding:6px 18px;font-family:var(--font-code);font-size:17.5px;line-height:1.36;color:#d7def0;white-space:pre}
+.term-body .pr{color:var(--stage)}
+.term-body .cmd{color:#fff;font-weight:700}
+.term-body .r{color:var(--red)}
+.term-body .g{color:var(--stage)}
+.term-body .d{color:#64708c;font-family:var(--font-body);font-weight:700}
+.caret{display:inline-block;width:10px;height:19px;background:#fff;vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ===========================================
+   CHANNEL — インターネット（push の通り道）
+   =========================================== */
+.net{position:absolute;left:1186px;width:208px;top:400px;height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.net .pb{font-family:var(--font-code);font-weight:700;font-size:20px;padding:8px 16px;border-radius:999px;background:#151d2e;border:1.5px solid #34415f;color:var(--muted);transition:all .35s}
+.net.act .pb{background:var(--remote);border-color:var(--remote);color:#120a24;box-shadow:0 0 20px var(--remote)}
+.net .wire{width:190px;height:4px;background:repeating-linear-gradient(90deg,var(--remote) 0 14px,transparent 14px 26px);background-size:26px 4px;opacity:.45;position:relative}
+.net.act .wire{opacity:1;animation:flow .8s linear infinite}
+@keyframes flow{to{background-position:26px 0}}
+.net .wire::after{content:'▶';position:absolute;right:-10px;top:-11px;font-size:20px;color:var(--remote)}
+.net .proto{font-size:16px;font-weight:700;color:var(--muted);text-align:center;line-height:1.4}
+
+/* ===========================================
+   GITHUB — リモートリポジトリ
+   =========================================== */
+.gh{position:absolute;left:1400px;top:272px;width:430px;height:510px;border-radius:22px;background:var(--panel);border:2px solid #3a3366;box-shadow:0 30px 80px rgba(0,0,0,.5);padding:22px 24px;--c:var(--remote);transition:box-shadow .4s}
+.gh.act{box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 6px rgba(196,167,255,.22)}
+.cloud{position:absolute;left:24px;right:24px;top:-1px;height:0}
+.gh-h{display:flex;align-items:center;gap:12px;font-weight:900;font-size:28px}
+.gh-h .cl{font-size:30px}
+.gh-sub{font-size:16px;color:var(--muted);margin-top:4px}
+.repo{margin-top:18px;border-radius:12px;background:var(--panel-2);border:1.5px solid #2b2f50;padding:14px 16px}
+.repo-n{font-family:var(--font-code);font-weight:700;font-size:20px;color:var(--remote)}
+.repo-b{display:inline-block;margin-top:8px;font-family:var(--font-code);font-size:15px;padding:3px 10px;border-radius:999px;background:#1d2340;color:#cfc2ff}
+.hist-t{margin:18px 0 10px;font-weight:900;font-size:18px;color:var(--muted)}
+.gh .items{gap:10px}
+.gh-note{position:absolute;left:24px;right:24px;bottom:18px;font-size:16px;color:var(--muted);text-align:center}
+.gh-note b{color:var(--text)}
+
+/* ===========================================
+   FLYING — 移動アニメーション用の一時要素
+   =========================================== */
+.fly{position:absolute;z-index:20;pointer-events:none;will-change:transform}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:814px;height:96px;border-radius:18px;background:linear-gradient(90deg,#0f1c25,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:26px;padding:0 32px}
+.cap-no{flex:none;width:62px;height:62px;border-radius:50%;background:var(--stage);color:#04140f;font-family:var(--font-display);font-size:30px;display:flex;align-items:center;justify-content:center}
+.cap-tx{font-size:28px;font-weight:700;line-height:1.35;transition:opacity .25s}
+.cap-tx b{color:var(--stage);font-weight:900}
+.cap-tx code{font-family:var(--font-code);color:#fff;background:#1b2538;padding:2px 10px;border-radius:6px;font-size:25px}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   FOOTER — コマンドの役割 と 進行ステップ
+   =========================================== */
+.legend{position:absolute;left:90px;top:946px;display:flex;gap:14px}
+.chip{display:flex;align-items:center;gap:12px;padding:10px 18px 10px 10px;border-radius:12px;background:#0f1626;border:1.5px solid var(--line)}
+.chip i{font-style:normal;font-family:var(--font-code);font-weight:700;font-size:16px;color:#08101a;background:var(--c);border-radius:6px;padding:6px 10px}
+.chip b{font-size:20px;font-weight:900}
+.steps{position:absolute;right:90px;top:946px;display:flex}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;width:120px;cursor:pointer;position:relative}
+.step::before{content:'';position:absolute;top:17px;left:-50%;width:100%;height:3px;background:#24304a}
+.step:first-child::before{display:none}
+.step.past::before,.step.now::before{background:var(--stage)}
+.step .n{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#141c2c;border:2px solid #33415f;font-family:var(--font-code);font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .3s}
+.step .l{font-family:var(--font-code);font-size:16px;font-weight:700;color:var(--muted);white-space:nowrap}
+.step.past .n{background:#0d2b24;border-color:var(--stage);color:var(--stage)}
+.step.now .n{background:var(--stage);border-color:var(--stage);color:#04140f;box-shadow:0 0 0 6px rgba(46,230,168,.18)}
+.step.now .l{color:var(--text)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.18s}
+.slide.visible .d3{transition-delay:.3s}.slide.visible .d4{transition-delay:.42s}
+.slide.visible .d5{transition-delay:.55s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--stage);color:#04140f}
+body.editing [data-edit]{outline:1.5px dashed rgba(46,230,168,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>GIT BASICS <span>／ 変更を記録して GitHub に送る</span></div>
+      <h1 data-edit>git <em>add → commit → push</em> の流れ</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === ROLE LABELS === -->
+  <div class="role local reveal d2"><span class="tag">LOCAL</span><span class="name" data-edit>ローカルPC（ノートPC）</span><span class="eg" data-edit>自分のパソコンの中</span></div>
+  <div class="role remote reveal d2"><span class="tag">REMOTE</span><span class="name" data-edit>GitHub</span></div>
+
+  <!-- === LAPTOP === -->
+  <div class="laptop reveal d3" id="laptop">
+    <div class="screen">
+      <!-- 作業ディレクトリ -->
+      <div class="zone z-work" id="zWork">
+        <div class="z-h"><span class="ic">📁</span>作業ディレクトリ</div>
+        <div class="z-s" data-edit>ファイルを編集する場所</div>
+        <div class="items">
+          <div class="fchip" id="w-index"><span class="fi"></span>index.html<span class="mk mod" id="m-index">変更あり</span></div>
+          <div class="fchip" id="w-style"><span class="fi"></span>style.css<span class="mk mod" id="m-style">変更あり</span></div>
+          <div class="fchip dim"><span class="fi"></span>README.md</div>
+        </div>
+      </div>
+      <div class="arrow a-add" id="aAdd"><span class="ab">add</span><span class="ar">▶</span></div>
+
+      <!-- ステージングエリア -->
+      <div class="zone z-stage" id="zStage">
+        <div class="z-h"><span class="ic">📋</span>ステージングエリア</div>
+        <div class="z-s" data-edit>コミットする変更を置く場所</div>
+        <div class="items">
+          <div class="fchip st hide" id="s-index"><span class="fi"></span>index.html</div>
+          <div class="fchip st hide" id="s-style"><span class="fi"></span>style.css</div>
+          <div class="empty" id="s-empty">（まだ何もありません）</div>
+        </div>
+      </div>
+      <div class="arrow a-commit" id="aCommit"><span class="ab">commit</span><span class="ar">▶</span></div>
+
+      <!-- ローカルリポジトリ -->
+      <div class="zone z-local" id="zLocal">
+        <div class="z-h"><span class="ic">🗄️</span>ローカルリポジトリ</div>
+        <div class="z-s" data-edit>履歴を保管する場所（.git）</div>
+        <div class="items">
+          <div class="commit new hide" id="l-new"><span class="dotc"></span><span class="id">a1b2c3d</span><span class="msg">トップページを更新</span><span class="tg" id="l-tag">未push</span></div>
+          <div class="commit old"><span class="dotc"></span><span class="id">9f8e7d6</span><span class="msg">最初のコミット</span></div>
+        </div>
+      </div>
+
+      <!-- ターミナル -->
+      <div class="term">
+        <div class="term-bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>ターミナル — ~/my-site</span></div>
+        <div class="term-body" id="term"></div>
+      </div>
+    </div>
+  </div>
+  <div class="base reveal d3"></div>
+
+  <!-- === INTERNET (push) === -->
+  <div class="net reveal d4" id="net">
+    <span class="pb">push</span>
+    <div class="wire"></div>
+    <div class="proto" data-edit>インターネット<br>（HTTPS で送信）</div>
+  </div>
+
+  <!-- === GITHUB === -->
+  <div class="gh reveal d3" id="gh">
+    <div class="gh-h"><span class="cl">☁️</span>リモートリポジトリ</div>
+    <div class="gh-sub" data-edit>インターネット上の共有の保管場所</div>
+    <div class="repo">
+      <div class="repo-n">yamada / my-site</div>
+      <span class="repo-b">⎇ main</span>
+    </div>
+    <div class="hist-t">コミット履歴</div>
+    <div class="items">
+      <div class="commit new hide" id="r-new"><span class="dotc"></span><span class="id">a1b2c3d</span><span class="msg">トップページを更新</span></div>
+      <div class="commit old"><span class="dotc"></span><span class="id">9f8e7d6</span><span class="msg">最初のコミット</span></div>
+    </div>
+    <div class="gh-note" data-edit>チームのみんなが<b>同じ履歴</b>を見られる</div>
+  </div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d5">
+    <div class="cap-no" id="capNo">1</div>
+    <div class="cap-tx" id="capTx"></div>
+  </div>
+
+  <!-- === FOOTER === -->
+  <div class="legend reveal d5">
+    <div class="chip" style="--c:var(--stage)"><i>add</i><b>ステージングに置く</b></div>
+    <div class="chip" style="--c:var(--local)"><i>commit</i><b>PCに記録する</b></div>
+    <div class="chip" style="--c:var(--remote)"><i>push</i><b>GitHubへ送る</b></div>
+  </div>
+  <div class="steps reveal d5" id="steps"></div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+
+/* ===========================================
+   HELPERS
+   =========================================== */
+const $ = id => document.getElementById(id);
+const slide = $('slide');
+let token = 0, playing = true, current = 0;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('cancel'), ms));
+
+/* 要素のステージ上の位置（1920×1080 座標）を求める */
+function rectOf(el){
+  const s = stage.getBoundingClientRect(), f = s.width / 1920, r = el.getBoundingClientRect();
+  return { x:(r.left-s.left)/f, y:(r.top-s.top)/f, w:r.width/f, h:r.height/f };
+}
+/* fromEl の見た目をコピーして toEl の位置まで飛ばす */
+function fly(fromEl, toEl, t, dur=1100){
+  if (t !== token) return Promise.reject('cancel');
+  const a = rectOf(fromEl), b = rectOf(toEl);
+  const c = fromEl.cloneNode(true);
+  c.removeAttribute('id'); c.classList.remove('hide','pending');
+  c.classList.add('fly');
+  Object.assign(c.style, { left:a.x+'px', top:a.y+'px', width:a.w+'px', height:a.h+'px', margin:0 });
+  slide.appendChild(c);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const anim = c.animate([
+    { transform:'translate(0,0) scale(1)' },
+    { transform:`translate(${dx*0.5}px,${dy*0.5 - 60}px) scale(1.06)`, offset:.5 },
+    { transform:`translate(${dx}px,${dy}px) scale(1)` }
+  ], { duration:dur, easing:'cubic-bezier(.5,0,.25,1)', fill:'forwards' });
+  return anim.finished.then(() => { c.remove(); if (t !== token) throw 'cancel'; });
+}
+const show = (id, on=true) => $(id).classList.toggle('hide', !on);
+
+/* ===========================================
+   TERMINAL — コマンドと実行結果
+   =========================================== */
+const PROMPT = '<span class="pr">~/my-site $</span> ';
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function outHTML(lines){
+  return lines.map(l => typeof l === 'string' ? esc(l) : `<span class="${l.c}">${esc(l.t)}</span>`).join('\n');
+}
+function termStatic(cmd, out){
+  $('term').innerHTML = cmd == null
+    ? PROMPT + '<span class="caret"></span>'
+    : PROMPT + `<span class="cmd">${esc(cmd)}</span>\n` + outHTML(out);
+}
+async function typeCmd(cmd, t){
+  for (let i = 0; i <= cmd.length; i++){
+    $('term').innerHTML = PROMPT + `<span class="cmd">${esc(cmd.slice(0,i))}</span><span class="caret"></span>`;
+    await sleep(45, t);
+  }
+  await sleep(350, t);
+  $('term').innerHTML = PROMPT + `<span class="cmd">${esc(cmd)}</span>`;
+}
+async function printOut(cmd, out, t){
+  for (let i = 1; i <= out.length; i++){
+    $('term').innerHTML = PROMPT + `<span class="cmd">${esc(cmd)}</span>\n` + outHTML(out.slice(0,i));
+    await sleep(220, t);
+  }
+}
+
+/* ===========================================
+   STEPS — 5つの場面（コマンド・出力・説明文はここで編集）
+   =========================================== */
+const STEPS = [
+  { l:'編集', cmd:'git status',
+    out:['On branch main','Changes not staged for commit:',
+         {c:'r',t:'        modified:   index.html'},{c:'r',t:'        modified:   style.css'},
+         {c:'d',t:'      ↑ 変更されたけど、まだステージングされていないファイル'}],
+    cap:'ファイルを編集・保存しました。<code>git status</code> で見ると、変更は<b>作業ディレクトリ</b>にあるだけで未記録です。',
+    async run(t){
+      await sleep(400, t);
+      $('m-index').classList.add('on'); await sleep(350, t);
+      $('m-style').classList.add('on'); await sleep(600, t);
+      await typeCmd(this.cmd, t); await printOut(this.cmd, this.out, t);
+    }},
+  { l:'add', cmd:'git add index.html style.css',
+    out:[{c:'d',t:'（何も表示されなければ成功）'}],
+    cap:'<code>git add</code> で、記録したい変更を<b>ステージングエリア</b>に置きます。これを「<b>ステージングする</b>」といいます。',
+    async run(t){
+      await typeCmd(this.cmd, t);
+      show('s-empty', false);
+      for (const [w, s, m] of [['w-index','s-index','m-index'],['w-style','s-style','m-style']]){
+        show(s); $(s).classList.add('pending');
+        await fly($(w), $(s), t); $(s).classList.remove('pending'); $(m).classList.remove('on');
+        await sleep(150, t);
+      }
+      await printOut(this.cmd, this.out, t);
+    }},
+  { l:'commit', cmd:'git commit -m "トップページを更新"',
+    out:['[main a1b2c3d] トップページを更新',' 2 files changed, 12 insertions(+), 3 deletions(-)'],
+    cap:'<code>git commit</code> で、ステージングした変更を<b>コミット</b>（1つの記録）として<b>ローカルリポジトリ</b>に保存。まだPCの中だけです。',
+    async run(t){
+      await typeCmd(this.cmd, t);
+      show('l-new'); $('l-new').classList.add('pending'); $('l-tag').classList.add('on');
+      const a = fly($('s-index'), $('l-new'), t); await sleep(180, t);
+      const b = fly($('s-style'), $('l-new'), t);
+      show('s-index', false); show('s-style', false);
+      await a; await b; show('s-empty');
+      $('l-new').classList.remove('pending');
+      await printOut(this.cmd, this.out, t);
+    }},
+  { l:'push', cmd:'git push origin main',
+    out:['To https://github.com/yamada/my-site.git',{c:'g',t:'   9f8e7d6..a1b2c3d  main -> main'}],
+    cap:'<code>git push</code> で、ローカルのコミットを <b>GitHub</b>（リモートリポジトリ）へインターネット経由で<b>アップロード</b>します。',
+    async run(t){
+      await typeCmd(this.cmd, t);
+      show('r-new'); $('r-new').classList.add('pending');
+      await fly($('l-new'), $('r-new'), t, 1500);
+      $('r-new').classList.remove('pending'); $('l-tag').classList.remove('on');
+      await printOut(this.cmd, this.out, t);
+    }},
+  { l:'完了', cmd:'git status',
+    out:['On branch main',"Your branch is up to date with 'origin/main'.",{c:'g',t:'nothing to commit, working tree clean'},
+         {c:'d',t:'      ↑ GitHub と同じ状態。未記録の変更もなし'}],
+    cap:'完了！ PCと <b>GitHub</b> に同じ履歴がそろいました。編集 → <code>add</code> → <code>commit</code> → <code>push</code> をくり返します。',
+    async run(t){ await typeCmd(this.cmd, t); await printOut(this.cmd, this.out, t); }}
+];
+
+STEPS.forEach((s, i) => {
+  const d = document.createElement('div');
+  d.className = 'step';
+  d.innerHTML = `<span class="n">${i+1}</span><span class="l">${s.l}</span>`;
+  d.onclick = () => jump(i);
+  $('steps').appendChild(d);
+});
+
+/* ===========================================
+   STATE — 「k番目の場面まで終わった」状態を画面に反映
+   =========================================== */
+function render(k){
+  $('m-index').classList.toggle('on', k === 0);
+  $('m-style').classList.toggle('on', k === 0);
+  show('s-index', k === 1); show('s-style', k === 1); show('s-empty', k !== 1);
+  show('l-new', k >= 2); $('l-tag').classList.toggle('on', k === 2);
+  show('r-new', k >= 3);
+  document.querySelectorAll('.pending').forEach(e => e.classList.remove('pending'));
+  $('laptop').classList.toggle('done', k >= 4);
+  if (k < 0) termStatic(null); else termStatic(STEPS[k].cmd, STEPS[k].out);
+}
+function highlight(i){
+  $('zWork').classList.toggle('act', i === 0);
+  $('zStage').classList.toggle('act', i === 1);
+  $('aAdd').classList.toggle('act', i === 1);
+  $('zLocal').classList.toggle('act', i === 2);
+  $('aCommit').classList.toggle('act', i === 2);
+  $('net').classList.toggle('act', i === 3);
+  $('gh').classList.toggle('act', i === 3 || i === 4);
+}
+function setStep(i){
+  current = i; highlight(i);
+  $('capNo').textContent = i + 1;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { tx.innerHTML = STEPS[i].cap; tx.classList.remove('fade'); }, 180);
+  [...$('steps').children].forEach((el, j) => {
+    el.classList.toggle('past', j < i); el.classList.toggle('now', j === i);
+  });
+}
+const clearFly = () => document.querySelectorAll('.fly').forEach(e => e.remove());
+
+/* ===========================================
+   PLAYER — 自動再生（ループ）・一時停止・ジャンプ
+   =========================================== */
+async function play(from, once=false){
+  const t = ++token; clearFly();
+  let i = from;
+  try{
+    while (true){
+      setStep(i); render(i - 1);
+      await STEPS[i].run(t);
+      render(i);
+      if (once || !playing) return;
+      await sleep(i === STEPS.length - 1 ? 4000 : 1800, t);
+      i = (i + 1) % STEPS.length;
+    }
+  }catch(e){ /* キャンセル */ }
+}
+function setPlaying(v){ playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生'; }
+function togglePlay(){
+  if (playing){ setPlaying(false); token++; clearFly(); render(current); }
+  else { setPlaying(true); play((current + 1) % STEPS.length); }
+}
+function jump(i){ i = (i + STEPS.length) % STEPS.length; play(i, !playing); }
+$('btnPlay').onclick = togglePlay;
+$('btnReplay').onclick = () => { setPlaying(true); play(0); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); togglePlay(); }
+  if (e.key === 'ArrowRight') jump(current + 1);
+  if (e.key === 'ArrowLeft') jump(current - 1);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit]').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'git-add-commit-push.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+render(-1);
+setTimeout(() => play(0), 900);
+</script>
+</body>
+</html>

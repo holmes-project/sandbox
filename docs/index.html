@@ -54,6 +54,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            margin-bottom: 12px;
             padding: 14px 18px;
             background: #6b4226;
             color: #fffaf3;
@@ -97,6 +98,11 @@
             <span>静的Webページの読み込み</span>
             <span class="arrow">→</span>
         </a>
+        <a class="lecture-link" href="lectures/002-git-add-commit-push.html">
+            <span class="no">002</span>
+            <span>git add・commit・push</span>
+            <span class="arrow">→</span>
+        </a>
 
         <h2>日記</h2>
         <p>朝にコーヒーを飲んだ。</p>
@@ -133,11 +139,11 @@
             { type: "spring", bounce: 0.55, duration: 0.9, delay: stagger(0.3, { startDelay: 0.8 }) }
         );
 
-        // ===== 講義リンク：下から跳ねて登場 =====
+        // ===== 講義リンク：下から1つずつ跳ねて登場 =====
         animate(
             ".lecture-link",
             { opacity: [0, 1], y: [60, 0], scale: [0.6, 1] },
-            { type: "spring", bounce: 0.5, duration: 0.9, delay: 1.1 }
+            { type: "spring", bounce: 0.5, duration: 0.9, delay: stagger(0.15, { startDelay: 1.1 }) }
         );
 
         hover(".lecture-link", (el) => {
@@ -156,7 +162,7 @@
             animate(
                 el,
                 { opacity: [0, 1], x: [400 * dir, 0], rotate: [30 * dir, 0], scale: [0.5, 1] },
-                { type: "spring", bounce: 0.5, duration: 1, delay: 1.5 + i * 0.25 }
+                { type: "spring", bounce: 0.5, duration: 1, delay: 1.6 + i * 0.25 }
             );
         });
 
