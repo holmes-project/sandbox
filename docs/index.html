@@ -3,12 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index</title>
+    <title>ホームズプロジェクト</title>
+    <style>
+        /* ページ全体 */
+        body {
+            margin: 0;
+            padding: 40px 20px;
+            background: #f5efe6;
+            color: #3b2f2a;
+            font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+            line-height: 1.8;
+        }
+
+        /* 中央のカード */
+        main {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 40px;
+            background: #fffaf3;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(59, 47, 42, 0.12);
+        }
+
+        h1 {
+            margin: 0 0 32px;
+            font-size: 1.8rem;
+            text-align: center;
+            color: #6b4226;
+            letter-spacing: 0.05em;
+        }
+
+        h2 {
+            margin: 0 0 16px;
+            padding-left: 12px;
+            font-size: 1.3rem;
+            border-left: 5px solid #c08552;
+        }
+
+        /* 日記の各項目 */
+        p {
+            margin: 0 0 12px;
+            padding: 14px 18px;
+            background: #f3e6d8;
+            border-radius: 10px;
+            transition: transform 0.2s;
+        }
+
+        p:hover {
+            transform: translateX(6px);
+        }
+
+        /* スマホ向けの調整 */
+        @media (max-width: 480px) {
+            main {
+                padding: 24px;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>これはホームズプロジェクトです。</h1>
-    <h2>日記</h2>
-    <p>朝にコーヒーを飲んだ。</p>
-    <p>朝にワッフルとドーナツを食べた。</p>
+    <main>
+        <h1>これはホームズプロジェクトです。</h1>
+        <h2>日記</h2>
+        <p>朝にコーヒーを飲んだ。</p>
+        <p>朝にワッフルとドーナツを食べた。</p>
+    </main>
 </body>
 </html>
