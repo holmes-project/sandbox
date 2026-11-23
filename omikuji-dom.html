@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>おみくじで学ぶDOM</title>
+<style>
+  :root {
+    --red: #c8312b;
+    --red-dark: #9e2420;
+    --paper: #fbf7ef;
+    --ink: #2b2522;
+    --muted: #7a6f68;
+    --line: #e4dccd;
+    --code-bg: #1f2430;
+    --code-fg: #d8dee9;
+    --flash: #ffe066;
+    --added: #8fd694;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  header {
+    padding: 28px 24px 12px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: .2em;
+    color: var(--red);
+    font-weight: 700;
+  }
+  h1 { margin: 4px 0 6px; font-size: 28px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 16px 24px 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel h2 {
+    margin: 0;
+    padding: 10px 16px;
+    font-size: 14px;
+    background: #f4eee3;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel h2 small { color: var(--muted); font-weight: normal; }
+  .panel-body { padding: 16px; }
+  .wide { grid-column: 1 / -1; }
+
+  /* ===== おみくじアプリ（ここがDOM観察対象） ===== */
+  #app { text-align: center; padding: 24px 16px; }
+  #tube {
+    width: 90px; height: 140px;
+    margin: 0 auto 16px;
+    background: linear-gradient(90deg, #a5281f, var(--red), #a5281f);
+    border-radius: 10px;
+    color: #fff;
+    writing-mode: vertical-rl;
+    font-size: 22px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: .3em;
+    box-shadow: 0 6px 0 var(--red-dark);
+  }
+  #tube.shaking { animation: shake .15s infinite; }
+  @keyframes shake {
+    0% { transform: rotate(-12deg); }
+    50% { transform: rotate(12deg); }
+    100% { transform: rotate(-12deg); }
+  }
+  #draw-btn {
+    font-size: 18px;
+    padding: 10px 32px;
+    border: none;
+    border-radius: 999px;
+    background: var(--red);
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #draw-btn:hover { background: var(--red-dark); }
+  #draw-btn:disabled { background: #bbb; cursor: wait; }
+  #result {
+    margin: 20px auto 6px;
+    width: 140px; height: 140px;
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; font-weight: 900;
+    background: #fff;
+  }
+  #result.daikichi { color: #d4a017; border-color: #d4a017; background: #fff8e0; }
+  #result.kichi    { color: var(--red); border-color: var(--red); }
+  #result.suekichi { color: #4a7c59; border-color: #4a7c59; }
+  #result.kyo      { color: #555; border-color: #555; background: #eee; }
+  #message { min-height: 1.6em; margin: 8px 0 16px; color: var(--muted); }
+  #history {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  }
+  #history li {
+    font-size: 13px;
+    padding: 2px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+  }
+
+  /* ===== DOMツリー表示 ===== */
+  #tree {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    padding: 14px;
+    margin: 0;
+    min-height: 380px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .t-line { display: block; border-radius: 3px; padding: 0 4px; }
+  .t-guide { color: #5c6577; }
+  .t-tag { color: #81a1c1; }
+  .t-id { color: #ebcb8b; }
+  .t-class { color: #a3be8c; }
+  .t-attr { color: #b48ead; }
+  .t-text { color: #eceff4; }
+  .t-text::before { content: "#text "; color: #5c6577; }
+  .t-changed { animation: flash 1.6s ease-out; }
+  .t-added   { animation: added 1.6s ease-out; }
+  @keyframes flash { 0%,40% { background: var(--flash); color: #000; } 100% { background: transparent; } }
+  @keyframes added { 0%,40% { background: var(--added); color: #000; } 100% { background: transparent; } }
+  .legend { font-size: 12px; color: var(--muted); padding: 8px 16px; border-top: 1px solid var(--line); }
+  .legend span { display: inline-block; width: 12px; height: 12px; vertical-align: middle; border-radius: 2px; margin: 0 4px 0 10px; }
+
+  /* ===== 変更ログ ===== */
+  #log {
+    list-style: none; margin: 0; padding: 0;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+  #log li { padding: 6px 4px; border-bottom: 1px dashed var(--line); }
+  #log .type {
+    display: inline-block; min-width: 92px;
+    font-size: 11px; font-weight: 700;
+    padding: 1px 6px; border-radius: 4px; margin-right: 8px;
+    text-align: center; color: #fff;
+  }
+  .type.text { background: #d08770; }
+  .type.attr { background: #b48ead; }
+  .type.add  { background: #4a9c5d; }
+  .type.remove { background: #888; }
+  #log code { background: #f4eee3; padding: 1px 5px; border-radius: 4px; }
+  #log .empty { color: var(--muted); font-family: inherit; }
+  .btn-sub {
+    font-size: 12px; padding: 3px 10px;
+    border: 1px solid var(--line); background: #fff; border-radius: 6px; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">DOM BASICS</div>
+  <h1>おみくじで学ぶDOM</h1>
+  <p>ボタンを押すと JavaScript が DOM を書き換えます。右のツリーと下のログで「何が変わったか」を確認しましょう。</p>
+</header>
+
+<main>
+  <!-- 左：画面（ブラウザが描画した結果） -->
+  <section class="panel">
+    <h2>画面 <small>#app の描画結果</small></h2>
+    <div id="app">
+      <div id="tube">おみくじ</div>
+      <button id="draw-btn">おみくじを引く</button>
+      <div id="result">？</div>
+      <p id="message">ボタンを押してね</p>
+      <ul id="history"></ul>
+    </div>
+  </section>
+
+  <!-- 右：現在のDOMツリー -->
+  <section class="panel">
+    <h2>現在のDOMツリー <small>#app 以下をリアルタイム表示</small></h2>
+    <pre id="tree"></pre>
+    <div class="legend">
+      <span style="background:var(--flash)"></span>変更されたノード
+      <span style="background:var(--added)"></span>追加されたノード
+    </div>
+  </section>
+
+  <!-- 下：変更ログ -->
+  <section class="panel wide">
+    <h2>
+      DOM変更ログ <small>MutationObserver が検知した変更（新しい順）</small>
+      <button class="btn-sub" id="clear-log">ログを消す</button>
+    </h2>
+    <div class="panel-body">
+      <ul id="log"><li class="empty">まだ変更はありません</li></ul>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ========== 1. DOM要素を取得する ==========
+  const app     = document.getElementById("app");
+  const tube    = document.getElementById("tube");
+  const button  = document.getElementById("draw-btn");
+  const result  = document.getElementById("result");
+  const message = document.getElementById("message");
+  const history = document.getElementById("history");
+  const treeEl  = document.getElementById("tree");
+  const logEl   = document.getElementById("log");
+
+  const FORTUNES = [
+    { name: "大吉", cls: "daikichi", msg: "最高の一日になりそう！" },
+    { name: "中吉", cls: "kichi",    msg: "いいことがありそう。" },
+    { name: "小吉", cls: "kichi",    msg: "小さな幸せを見つけよう。" },
+    { name: "吉",   cls: "kichi",    msg: "おだやかな運勢です。" },
+    { name: "末吉", cls: "suekichi", msg: "あとから運が向いてきます。" },
+    { name: "凶",   cls: "kyo",      msg: "今日は慎重にいきましょう。" },
+  ];
+
+  // ========== 2. おみくじを引く（ここでDOMを書き換える） ==========
+  button.addEventListener("click", () => {
+    button.disabled = true;           // 属性の変更
+    tube.classList.add("shaking");    // class属性の変更
+    result.textContent = "…";         // テキストの変更
+    result.className = "";
+
+    setTimeout(() => {
+      const f = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+
+      tube.classList.remove("shaking");
+      result.textContent = f.name;    // テキストの変更
+      result.className = f.cls;       // class属性の変更
+      message.textContent = f.msg;
+
+      // 新しい要素を作って追加する
+      const li = document.createElement("li");
+      li.textContent = f.name;
+      history.prepend(li);
+      if (history.children.length > 5) {
+        history.lastElementChild.remove();   // 要素の削除
+      }
+      button.disabled = false;
+    }, 900);
+  });
+
+  // ========== 3. DOMツリーを描画する ==========
+  const changed = new WeakSet();  // 直近で変更されたノード
+  const added   = new WeakSet();  // 直近で追加されたノード
+
+  function esc(s) {
+    return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function describe(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return `<span class="t-text">"${esc(node.textContent)}"</span>`;
+    }
+    let s = `<span class="t-tag">&lt;${node.tagName.toLowerCase()}</span>`;
+    if (node.id) s += `<span class="t-id">#${esc(node.id)}</span>`;
+    if (node.classList.length) s += `<span class="t-class">.${esc([...node.classList].join("."))}</span>`;
+    for (const a of node.attributes) {
+      if (a.name !== "id" && a.name !== "class") s += ` <span class="t-attr">${a.name}${a.value ? `="${esc(a.value)}"` : ""}</span>`;
+    }
+    return s + `<span class="t-tag">&gt;</span>`;
+  }
+
+  function visibleChildren(node) {
+    return [...node.childNodes].filter(n =>
+      n.nodeType === Node.ELEMENT_NODE ||
+      (n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== "")
+    );
+  }
+
+  function renderTree(node, prefix = "", isLast = true, isRoot = true) {
+    const branch = isRoot ? "" : (isLast ? "└─ " : "├─ ");
+    let cls = "t-line";
+    if (added.has(node)) cls += " t-added";
+    else if (changed.has(node)) cls += " t-changed";
+    let html = `<span class="${cls}"><span class="t-guide">${prefix}${branch}</span>${describe(node)}</span>`;
+    const kids = visibleChildren(node);
+    const nextPrefix = isRoot ? "" : prefix + (isLast ? "   " : "│  ");
+    kids.forEach((k, i) => { html += renderTree(k, nextPrefix, i === kids.length - 1, false); });
+    return html;
+  }
+
+  function drawTree() {
+    treeEl.innerHTML =
+      `<span class="t-line"><span class="t-tag">document</span></span>` +
+      `<span class="t-line t-guide">└─ … &lt;body&gt; …</span>` +
+      renderTree(app);
+  }
+
+  // ========== 4. DOMの変更を監視する（MutationObserver） ==========
+  function label(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) return "?";
+    return `&lt;${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}&gt;`;
+  }
+
+  function addLog(type, typeLabel, html) {
+    const empty = logEl.querySelector(".empty");
+    if (empty) empty.remove();
+    const li = document.createElement("li");
+    const time = new Date().toLocaleTimeString("ja-JP");
+    li.innerHTML = `<span class="type ${type}">${typeLabel}</span>${html} <small style="color:#aaa">${time}</small>`;
+    logEl.prepend(li);
+  }
+
+  const observer = new MutationObserver(records => {
+    for (const r of records) {
+      if (r.type === "attributes") {
+        changed.add(r.target);
+        const now = r.target.getAttribute(r.attributeName);
+        addLog("attr", "属性変更",
+          `${label(r.target)} の <code>${r.attributeName}</code>: ` +
+          `<code>${esc(r.oldValue ?? "(なし)")}</code> → <code>${esc(now ?? "(削除)")}</code>`);
+      }
+      if (r.type === "childList") {
+        const addedNodes = [...r.addedNodes];
+        const removedNodes = [...r.removedNodes];
+        const textSwap = addedNodes.length === 1 && addedNodes[0].nodeType === Node.TEXT_NODE;
+
+        if (textSwap) {
+          // textContent = ... はテキストノードの入れ替えとして検知される
+          changed.add(r.target);
+          added.add(addedNodes[0]);
+          const old = removedNodes.map(n => n.textContent).join("");
+          addLog("text", "テキスト変更",
+            `${label(r.target)}: <code>${esc(old || "(空)")}</code> → <code>${esc(addedNodes[0].textContent)}</code>`);
+        } else {
+          addedNodes.forEach(n => {
+            if (n.nodeType !== Node.ELEMENT_NODE) return;
+            added.add(n);
+            n.childNodes.forEach(c => added.add(c));
+            addLog("add", "要素追加", `${label(r.target)} に <code>&lt;${n.tagName.toLowerCase()}&gt;${esc(n.textContent)}</code> を追加`);
+          });
+          removedNodes.forEach(n => {
+            if (n.nodeType !== Node.ELEMENT_NODE) return;
+            addLog("remove", "要素削除", `${label(r.target)} から <code>&lt;${n.tagName.toLowerCase()}&gt;${esc(n.textContent)}</code> を削除`);
+          });
+        }
+      }
+    }
+    drawTree();
+    // ハイライトは1回だけ見せたいので、描画後に印を消す
+    resetMarks();
+  });
+
+  function resetMarks() {
+    // WeakSetはclearできないので作り直す代わりに、描画済みノードを削除
+    app.querySelectorAll("*").forEach(n => {
+      changed.delete(n); added.delete(n);
+      n.childNodes.forEach(c => { changed.delete(c); added.delete(c); });
+    });
+    changed.delete(app);
+  }
+
+  observer.observe(app, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeOldValue: true,
+    characterData: true,
+    characterDataOldValue: true,
+  });
+
+  document.getElementById("clear-log").addEventListener("click", () => {
+    logEl.innerHTML = `<li class="empty">まだ変更はありません</li>`;
+  });
+
+  drawTree();
+</script>
+</body>
+</html>
