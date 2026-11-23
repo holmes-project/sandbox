@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOMってなに？ 画面が変わるしくみ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0b111d;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --html:#ff7a45;
+  --css:#3f8cff;
+  --js:#f4d03f;
+  --dom:#2ee6a8;      /* DOM（主役） */
+  --view:#4fe3f0;     /* 画面 */
+  --chg:#ff5fa2;      /* 変更 */
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(620px 560px at 940px 520px, rgba(46,230,168,.10), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:44px;right:90px;height:130px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--dom);margin-bottom:10px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:70px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--dom)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--dom);background:#18233a}
+
+/* ===========================================
+   CODE CARDS — HTML / CSS / JavaScript
+   =========================================== */
+.card{position:absolute;border-radius:16px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 30%,#1f2a40);overflow:hidden;transition:border-color .35s,box-shadow .35s}
+.card.act{border-color:var(--c);box-shadow:0 0 0 5px color-mix(in srgb,var(--c) 16%,transparent)}
+.card-h{height:40px;display:flex;align-items:center;gap:12px;padding:0 16px;background:#0c1220;border-bottom:1px solid #1e2a42}
+.card-h i{font-style:normal;font-family:var(--font-code);font-weight:700;font-size:14px;color:#0a0e16;background:var(--c);border-radius:5px;padding:3px 8px}
+.card-h b{font-family:var(--font-code);font-size:18px}
+.card-h span{margin-left:auto;font-size:15px;color:var(--muted);font-weight:700}
+.code{padding:8px 0;font-family:var(--font-code);font-size:15.5px;line-height:21px;white-space:pre;color:#c9d4ee}
+.code .ln{padding:0 16px;border-left:4px solid transparent;transition:background .25s,border-color .25s}
+.code .ln.hl{background:color-mix(in srgb,var(--c) 22%,transparent);border-left-color:var(--c);color:#fff}
+.code .t{color:#ff9e7a}.code .a{color:#9ecbff}.code .s{color:#a5e8a0}.code .k{color:#d7a6ff}.code .f{color:#ffe17a}.code .cm{color:#5f6c88}
+.c-html{left:90px;top:212px;width:480px;height:356px;--c:var(--html)}
+.c-css{left:90px;top:582px;width:480px;height:208px;--c:var(--css)}
+.c-js{left:1310px;top:486px;width:520px;height:304px;--c:var(--js)}
+.c-js .code{font-size:14.5px;line-height:20px}
+.note{position:absolute;left:16px;right:16px;bottom:12px;min-height:38px;border-radius:10px;background:#0b111d;border:1.5px dashed #33415f;padding:6px 14px;font-size:17px;font-weight:700;color:var(--muted);transition:all .3s}
+.note.on{border-style:solid;border-color:var(--c);color:var(--text)}
+.note b{color:var(--c)}
+
+/* ===========================================
+   DOM TREE — 主役（ブラウザのメモリの中）
+   =========================================== */
+.tree{position:absolute;left:630px;top:212px;width:620px;height:578px;border-radius:20px;background:linear-gradient(180deg,#0f1b1c,#0e1422);border:2px solid rgba(46,230,168,.45);box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden}
+.tree.act{box-shadow:0 30px 80px rgba(0,0,0,.45),0 0 0 6px rgba(46,230,168,.18)}
+.tree-h{position:absolute;left:22px;top:16px;right:22px;display:flex;align-items:baseline;gap:14px}
+.tree-h b{font-weight:900;font-size:28px;color:var(--dom)}
+.tree-h span{font-size:16px;color:var(--muted);font-weight:700}
+.tree svg{position:absolute;left:0;top:0;width:620px;height:578px;max-width:none;max-height:none}
+.edge{fill:none;stroke:#3b5a5a;stroke-width:2.5;stroke-dasharray:400;stroke-dashoffset:400;transition:stroke-dashoffset .6s var(--ease)}
+.edge.on{stroke-dashoffset:0}
+.edge.new{stroke:var(--chg)}
+.node{position:absolute;height:44px;border-radius:10px;background:#0c1a1f;border:2px solid #2e6a5e;display:flex;align-items:center;justify-content:center;font-family:var(--font-code);font-weight:700;font-size:17px;color:#d9fff2;opacity:0;transform:scale(.4);transition:opacity .35s,transform .45s var(--ease),border-color .3s,box-shadow .3s,background .3s}
+.node.on{opacity:1;transform:none}
+.node.root{background:#16222b;border-color:#5f7590;color:#fff}
+.node.flash{border-color:var(--chg);box-shadow:0 0 0 6px rgba(255,95,162,.25),0 0 24px rgba(255,95,162,.5)}
+.node.evt{border-color:var(--view);box-shadow:0 0 0 6px rgba(79,227,240,.25),0 0 24px rgba(79,227,240,.5)}
+.node.hlc{background:#2a1608;border-color:#e8590c;color:#ffb38a}
+.node.newn{border-color:var(--chg)}
+.node .sd{position:absolute;right:-7px;top:-7px;width:16px;height:16px;border-radius:50%;background:var(--css);border:2px solid #0a0e16;opacity:0;transform:scale(0);transition:all .35s var(--ease)}
+.node.styled .sd{opacity:1;transform:none}
+.txt{position:absolute;font-size:15px;font-weight:700;color:#a8f0cf;white-space:nowrap;transform:translateX(-50%);opacity:0;transition:opacity .35s,color .3s}
+.txt.on{opacity:1}
+.txt.chg{color:var(--chg)}
+.tag{position:absolute;font-size:13px;font-weight:900;padding:2px 8px;border-radius:999px;background:var(--chg);color:#200814;white-space:nowrap;transform:translateX(-50%) scale(.5);opacity:0;transition:all .35s var(--ease);z-index:3}
+.tag.on{opacity:1;transform:translateX(-50%) scale(1)}
+.tree-legend{position:absolute;left:22px;right:22px;bottom:14px;display:flex;gap:22px;font-size:15px;color:var(--muted);font-weight:700;align-items:center}
+.tree-legend .k{display:inline-block;width:22px;height:14px;border-radius:4px;border:2px solid #2e6a5e;background:#0c1a1f;vertical-align:-2px;margin-right:6px}
+.tree-legend .q{color:#a8f0cf;margin-right:6px}
+.tree-legend .d{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--css);margin-right:6px}
+
+/* ===========================================
+   PREVIEW — ブラウザの画面
+   =========================================== */
+.preview{position:absolute;left:1310px;top:212px;width:520px;height:260px;border-radius:16px;background:var(--panel);border:2px solid #2a3957;overflow:hidden;transition:box-shadow .35s,border-color .35s}
+.preview.act{border-color:var(--view);box-shadow:0 0 0 5px rgba(79,227,240,.16)}
+.pv-top{height:38px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#0c1220}
+.pv-top i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.pv-top span{margin-left:12px;font-size:15px;color:var(--muted)}
+.pv-top em{margin-left:auto;font-style:normal;font-size:14px;font-weight:900;color:var(--view)}
+.pv-body{position:absolute;left:0;right:0;top:38px;bottom:0;background:#fff;color:#222;padding:16px 26px;font-family:var(--font-body)}
+.pv-blank{position:absolute;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;color:#a9b1bf;font-size:18px;z-index:2;transition:opacity .5s}
+.pv-body h2{font-size:30px;font-weight:900;color:#2b59c3;transition:color .4s}
+.pv-body h2.hl{color:#e8590c}
+.pv-body ul{list-style:none;margin:10px 0 12px;font-size:20px;font-weight:700}
+.pv-body li::before{content:'・'}
+.pv-body li.new{color:var(--chg)}
+.pv-btn{display:inline-block;font-size:18px;font-weight:900;color:#fff;background:#2b59c3;border-radius:8px;padding:6px 20px;transition:transform .15s}
+.pv-btn.press{transform:scale(.9)}
+.flashbg{animation:fbg 1.2s ease}
+@keyframes fbg{0%{background:rgba(255,95,162,.35)}100%{background:transparent}}
+.cursor{position:absolute;width:30px;height:30px;z-index:5;opacity:0;transition:left .9s var(--ease),top .9s var(--ease),opacity .3s}
+.cursor.on{opacity:1}
+.ripple{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid var(--view);transform:translate(-50%,-50%);animation:rip .7s ease-out forwards;z-index:4}
+@keyframes rip{to{width:80px;height:80px;opacity:0}}
+
+/* ===========================================
+   FLOW ARROWS — 列と列をつなぐ矢印
+   =========================================== */
+.arw{position:absolute;width:60px;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:4}
+.arw .ab{font-weight:900;font-size:15px;padding:4px 8px;border-radius:999px;background:#151d2e;border:1.5px solid #34415f;color:var(--muted);white-space:nowrap;transition:all .35s}
+.arw .ar{font-size:22px;color:#3d4a68;transition:color .35s}
+.arw.act .ab{background:var(--c);border-color:var(--c);color:#0a0e16;box-shadow:0 0 16px var(--c)}
+.arw.act .ar{color:var(--c);animation:nudge .6s ease-in-out infinite alternate}
+.arw.left.act .ar{animation-name:nudgeL}
+@keyframes nudge{to{transform:translateX(6px)}}
+@keyframes nudgeL{to{transform:translateX(-6px)}}
+.ar-html{left:570px;top:350px;--c:var(--html)}
+.ar-css{left:570px;top:652px;--c:var(--css)}
+.ar-view{left:1250px;top:318px;--c:var(--view)}
+.ar-js{left:1250px;top:600px;--c:var(--js)}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:814px;height:96px;border-radius:18px;background:linear-gradient(90deg,#0f1c1e,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:26px;padding:0 32px}
+.cap-no{flex:none;width:62px;height:62px;border-radius:50%;background:var(--dom);color:#04140f;font-family:var(--font-display);font-size:30px;display:flex;align-items:center;justify-content:center}
+.cap-tx{font-size:28px;font-weight:700;line-height:1.35;transition:opacity .25s}
+.cap-tx b{color:var(--dom);font-weight:900}
+.cap-tx code{font-family:var(--font-code);color:#fff;background:#1b2538;padding:2px 10px;border-radius:6px;font-size:24px}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   FOOTER
+   =========================================== */
+.legend{position:absolute;left:90px;top:946px;display:flex;gap:14px}
+.chip{display:flex;align-items:center;gap:12px;padding:10px 18px 10px 10px;border-radius:12px;background:#0f1626;border:1.5px solid var(--line)}
+.chip i{font-style:normal;font-family:var(--font-code);font-weight:700;font-size:15px;color:#0a0e16;background:var(--c);border-radius:6px;padding:6px 9px}
+.chip b{font-size:20px;font-weight:900}
+.steps{position:absolute;right:90px;top:946px;display:flex}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;width:118px;cursor:pointer;position:relative}
+.step::before{content:'';position:absolute;top:17px;left:-50%;width:100%;height:3px;background:#24304a}
+.step:first-child::before{display:none}
+.step.past::before,.step.now::before{background:var(--dom)}
+.step .n{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#141c2c;border:2px solid #33415f;font-family:var(--font-code);font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .3s}
+.step .l{font-size:15px;font-weight:700;color:var(--muted);white-space:nowrap}
+.step.past .n{background:#0d2b24;border-color:var(--dom);color:var(--dom)}
+.step.now .n{background:var(--dom);border-color:var(--dom);color:#04140f;box-shadow:0 0 0 6px rgba(46,230,168,.18)}
+.step.now .l{color:var(--text)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.18s}
+.slide.visible .d3{transition-delay:.3s}.slide.visible .d4{transition-delay:.42s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--dom);color:#04140f}
+body.editing [data-edit]{outline:1.5px dashed rgba(46,230,168,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>DOM BASICS <span>／ HTML・CSS・JavaScript と DOM の関係</span></div>
+      <h1 class="title" data-edit><em>DOM</em>ってなに？ 画面が変わるしくみ</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === HTML === -->
+  <div class="card c-html reveal d2" id="cHtml">
+    <div class="card-h"><i>HTML</i><b>index.html</b><span>DOMの「設計図」</span></div>
+    <div class="code" id="codeHtml"></div>
+  </div>
+
+  <!-- === CSS === -->
+  <div class="card c-css reveal d2" id="cCss">
+    <div class="card-h"><i>CSS</i><b>style.css</b><span>見た目のルール</span></div>
+    <div class="code" id="codeCss"></div>
+    <div class="note" id="noteCss" style="--c:var(--css)">DOMの各ノードに<b>見た目のルール</b>をあてはめる</div>
+  </div>
+
+  <!-- === DOM TREE === -->
+  <div class="tree reveal d3" id="tree">
+    <div class="tree-h"><b>DOMツリー</b><span data-edit>ブラウザが HTML から作る「木」の形のデータ</span></div>
+    <svg id="edges" viewBox="0 0 620 578"></svg>
+    <div class="tree-legend">
+      <span><span class="k"></span>要素ノード</span>
+      <span><span class="q">"文字"</span>テキスト</span>
+      <span><span class="d"></span>CSSが適用</span>
+      <span style="margin-left:auto">document ＝ 一番上の入口</span>
+    </div>
+  </div>
+
+  <!-- === BROWSER PREVIEW === -->
+  <div class="preview reveal d3" id="preview">
+    <div class="pv-top"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i><span>ToDo</span><em>ブラウザの画面</em></div>
+    <div class="pv-body" id="pvBody">
+      <div class="pv-blank" id="pvBlank">（まだ表示されていません）</div>
+      <h2 id="pvH1">やること</h2>
+      <ul id="pvList"><li>買い物</li><li class="new" id="pvLi2" style="display:none">掃除</li></ul>
+      <span class="pv-btn" id="pvBtn">追加</span>
+    </div>
+    <svg class="cursor" id="cursor" viewBox="0 0 24 24"><path d="M3 2l7 19 2.5-7.5L20 11z" fill="#fff" stroke="#111" stroke-width="1.5"/></svg>
+  </div>
+
+  <!-- === JS === -->
+  <div class="card c-js reveal d2" id="cJs">
+    <div class="card-h"><i>JS</i><b>app.js</b><span>DOMを操作する</span></div>
+    <div class="code" id="codeJs"></div>
+    <div class="note" id="noteJs" style="--c:var(--js)">クリックされるまで待機中…</div>
+  </div>
+
+  <!-- === ARROWS === -->
+  <div class="arw ar-html reveal d4" id="arHtml"><span class="ab">解析</span><span class="ar">▶</span></div>
+  <div class="arw ar-css reveal d4" id="arCss"><span class="ab">適用</span><span class="ar">▶</span></div>
+  <div class="arw ar-view reveal d4" id="arView"><span class="ab">描画</span><span class="ar">▶</span></div>
+  <div class="arw left ar-js reveal d4" id="arJs"><span class="ab">操作</span><span class="ar">◀</span></div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4">
+    <div class="cap-no" id="capNo">1</div>
+    <div class="cap-tx" id="capTx"></div>
+  </div>
+
+  <!-- === FOOTER === -->
+  <div class="legend reveal d4">
+    <div class="chip" style="--c:var(--html)"><i>HTML</i><b>DOMの元</b></div>
+    <div class="chip" style="--c:var(--css)"><i>CSS</i><b>見た目</b></div>
+    <div class="chip" style="--c:var(--js)"><i>JS</i><b>DOMを書き換える</b></div>
+  </div>
+  <div class="steps reveal d4" id="steps"></div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+
+const $ = id => document.getElementById(id);
+let token = 0, playing = true, current = 0;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('cancel'), ms));
+
+/* ===========================================
+   CODE — 表示するソースコード（色付けは簡易）
+   =========================================== */
+const HTML_LINES = [
+  '<t>&lt;html&gt;</t>',
+  '  <t>&lt;head&gt;</t>',
+  '    <t>&lt;title&gt;</t>ToDo<t>&lt;/title&gt;</t>',
+  '    <t>&lt;link</t> <a>href</a>=<s>"style.css"</s><t>&gt;</t>',
+  '  <t>&lt;/head&gt;</t>',
+  '  <t>&lt;body&gt;</t>',
+  '    <t>&lt;h1&gt;</t>やること<t>&lt;/h1&gt;</t>',
+  '    <t>&lt;ul</t> <a>id</a>=<s>"list"</s><t>&gt;</t>',
+  '      <t>&lt;li&gt;</t>買い物<t>&lt;/li&gt;</t>',
+  '    <t>&lt;/ul&gt;</t>',
+  '    <t>&lt;button</t> <a>id</a>=<s>"btn"</s><t>&gt;</t>追加<t>&lt;/button&gt;</t>',
+  '    <t>&lt;script</t> <a>src</a>=<s>"app.js"</s><t>&gt;&lt;/script&gt;</t>',
+  '  <t>&lt;/body&gt;</t>',
+  '<t>&lt;/html&gt;</t>'
+];
+const CSS_LINES = [
+  '<t>h1</t>     { <a>color</a>: <s>#2b59c3</s>; }',
+  '<t>.hl</t>    { <a>color</a>: <s>#e8590c</s>; }',
+  '<t>button</t> { <a>background</a>: <s>#2b59c3</s>; }'
+];
+const JS_LINES = [
+  '<k>const</k> btn = document.<f>querySelector</f>(<s>\'#btn\'</s>);',
+  'btn.<f>addEventListener</f>(<s>\'click\'</s>, () => {',
+  '  <k>const</k> h1 = document.<f>querySelector</f>(<s>\'h1\'</s>);',
+  '  h1.textContent = <s>\'やること（2件）\'</s>;',
+  '  h1.classList.<f>add</f>(<s>\'hl\'</s>);',
+  '  <k>const</k> li = document.<f>createElement</f>(<s>\'li\'</s>);',
+  '  li.textContent = <s>\'掃除\'</s>;',
+  '  document.<f>querySelector</f>(<s>\'#list\'</s>).<f>appendChild</f>(li);',
+  '});'
+];
+function fillCode(id, lines){
+  $(id).innerHTML = lines.map((l, i) =>
+    `<div class="ln" data-i="${i}">${l.replace(/<(\/?)([taskf])>/g, (m, c, k) => c ? '</span>' : `<span class="${k}">`)}</div>`
+  ).join('');
+}
+fillCode('codeHtml', HTML_LINES); fillCode('codeCss', CSS_LINES); fillCode('codeJs', JS_LINES);
+function hlLines(id, idxs){
+  $(id).querySelectorAll('.ln').forEach(el => el.classList.toggle('hl', idxs.includes(+el.dataset.i)));
+}
+
+/* ===========================================
+   DOM TREE — ノードの位置（ツリー枠内の座標）
+   =========================================== */
+const NODES = [
+  { id:'document', x:310, y:92,  w:140, parent:null, root:true },
+  { id:'html',     x:310, y:168, w:84,  parent:'document' },
+  { id:'head',     x:115, y:252, w:84,  parent:'html' },
+  { id:'body',     x:420, y:252, w:84,  parent:'html' },
+  { id:'title',    x:62,  y:346, w:84,  parent:'head', text:'"ToDo"' },
+  { id:'link',     x:170, y:346, w:84,  parent:'head' },
+  { id:'h1',       x:272, y:346, w:84,  parent:'body', text:'"やること"' },
+  { id:'ul',       x:372, y:346, w:84,  parent:'body' },
+  { id:'button',   x:470, y:346, w:90,  parent:'body', text:'"追加"' },
+  { id:'script',   x:566, y:346, w:84,  parent:'body' },
+  { id:'li1',      x:330, y:448, w:84,  parent:'ul', label:'li', text:'"買い物"' },
+  { id:'li2',      x:430, y:448, w:84,  parent:'ul', label:'li', text:'"掃除"', isNew:true }
+];
+const tree = $('tree'), svg = $('edges');
+NODES.forEach(n => {
+  const d = document.createElement('div');
+  d.className = 'node' + (n.root ? ' root' : '') + (n.isNew ? ' newn' : '');
+  d.id = 'n-' + n.id;
+  d.style.left = (n.x - n.w/2) + 'px'; d.style.top = (n.y - 22) + 'px'; d.style.width = n.w + 'px';
+  d.innerHTML = (n.label || n.id) + '<span class="sd"></span>';
+  tree.appendChild(d);
+  if (n.text){
+    const t = document.createElement('div');
+    t.className = 'txt'; t.id = 't-' + n.id;
+    t.style.left = n.x + 'px'; t.style.top = (n.y + 26) + 'px';
+    t.textContent = n.text; tree.appendChild(t);
+  }
+  if (n.parent){
+    const p = NODES.find(m => m.id === n.parent), mid = (p.y + 22 + n.y - 22) / 2;
+    const e = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    e.setAttribute('d', `M${p.x} ${p.y+22} V${mid} H${n.x} V${n.y-22}`);
+    e.setAttribute('class', 'edge' + (n.isNew ? ' new' : '')); e.id = 'e-' + n.id;
+    svg.appendChild(e);
+  }
+});
+/* 変更バッジ（ツリー上に出す小さなラベル） */
+function makeTag(id, x, y, text){
+  const t = document.createElement('div'); t.className = 'tag'; t.id = id;
+  t.style.left = x + 'px'; t.style.top = y + 'px'; t.textContent = text; tree.appendChild(t);
+}
+makeTag('tg-text', 272, 398, '文字を変更');
+makeTag('tg-class', 272, 300, 'class="hl" 追加');
+makeTag('tg-add', 430, 500, '新しく追加');
+
+function nodeOn(id, on=true){
+  $('n-' + id).classList.toggle('on', on);
+  const e = $('e-' + id); if (e) e.classList.toggle('on', on);
+  const t = $('t-' + id); if (t) t.classList.toggle('on', on);
+}
+const cls = (id, c, on=true) => $(id).classList.toggle(c, on);
+
+/* ===========================================
+   STEPS — 6つの場面（説明文はここで編集）
+   =========================================== */
+// HTMLの行番号 → そこで作られるノード
+const PARSE = [['html'],['head'],['title'],['link'],[],['body'],['h1'],['ul'],['li1'],[],['button'],['script'],[],[]];
+
+const STEPS = [
+  { l:'HTML → DOM',
+    cap:'ブラウザが <b>HTML</b> を上から読み、タグの親子関係をもとに <b>DOMツリー</b> を組み立てます。いちばん上は <code>document</code> です。',
+    async run(t){
+      cls('cHtml','act'); cls('arHtml','act'); cls('tree','act');
+      nodeOn('document'); await sleep(450, t);
+      for (let i = 0; i < PARSE.length; i++){
+        hlLines('codeHtml', [i]);
+        PARSE[i].forEach(id => nodeOn(id));
+        await sleep(PARSE[i].length ? 420 : 200, t);
+      }
+      hlLines('codeHtml', []);
+    }},
+  { l:'CSSを適用',
+    cap:'<b>CSS</b> のルールが、セレクタに合う <b>DOMのノード</b> にあてはめられます（青い点）。<code>.hl</code> に合うノードはまだありません。',
+    async run(t){
+      cls('cCss','act'); cls('arCss','act'); cls('tree','act'); cls('noteCss','on');
+      hlLines('codeCss', [0]); cls('n-h1','styled'); await sleep(900, t);
+      hlLines('codeCss', [1]); await sleep(900, t);
+      hlLines('codeCss', [2]); cls('n-button','styled'); await sleep(900, t);
+      hlLines('codeCss', []);
+    }},
+  { l:'画面に表示',
+    cap:'ブラウザは <b>DOM＋CSS</b> をもとに画面を描きます。画面に見えているのは、HTMLファイルではなく <b>DOMの姿</b> です。',
+    async run(t){
+      cls('tree','act'); cls('arView','act'); cls('preview','act');
+      await sleep(400, t); $('pvBlank').style.opacity = 0; await sleep(900, t);
+    }},
+  { l:'クリック',
+    cap:'ボタンをクリックすると「<b>イベント</b>」が発生。<b>JavaScript</b> に書いた「クリックされたら実行する処理」が動き出します。',
+    async run(t){
+      cls('preview','act'); cls('cJs','act');
+      const c = $('cursor'), b = $('pvBtn');
+      c.style.left = '380px'; c.style.top = '240px'; cls('cursor','on'); await sleep(300, t);
+      c.style.left = (b.offsetLeft + 50) + 'px'; c.style.top = (b.offsetTop + 50) + 'px';
+      await sleep(1000, t);
+      cls('pvBtn','press'); ripple(b.offsetLeft + 48, b.offsetTop + 54);
+      await sleep(160, t); cls('pvBtn','press', false);
+      cls('n-button','evt'); hlLines('codeJs', [0,1]);
+      setNote('<b>click</b> イベントが届いた！ <b>{ }</b> の中を実行します');
+      await sleep(1600, t);
+    }},
+  { l:'JSがDOMを変更',
+    cap:'<b>JavaScript</b> が <b>DOM</b> を書き換えます：文字を変える・class を付ける・新しいノードを追加する。',
+    async run(t){
+      cls('cJs','act'); cls('arJs','act'); cls('tree','act');
+      hlLines('codeJs', [2,3]); setNote('h1 を探して、<b>文字を書き換える</b>');
+      cls('n-h1','flash'); await sleep(600, t);
+      $('t-h1').textContent = '"やること（2件）"'; cls('t-h1','chg'); cls('tg-text','on');
+      await sleep(1500, t); cls('n-h1','flash', false);
+      hlLines('codeJs', [4]); setNote('h1 に <b>class="hl"</b> を付ける → CSS の .hl が効く');
+      cls('n-h1','flash'); await sleep(500, t); cls('n-h1','hlc'); cls('tg-class','on');
+      await sleep(1500, t); cls('n-h1','flash', false);
+      hlLines('codeJs', [5,6,7]); setNote('li を<b>新しく作って</b>、ul の子として<b>追加</b>する');
+      await sleep(500, t); nodeOn('li2'); cls('n-li2','styled', false); cls('tg-add','on');
+      await sleep(1700, t);
+    }},
+  { l:'画面が更新',
+    cap:'<b>DOM</b> が変わると、ブラウザが自動で画面を描き直します。<b>HTMLファイル自体は書き換わっていない</b>のがポイント！',
+    async run(t){
+      cls('tree','act'); cls('arView','act'); cls('preview','act');
+      await sleep(500, t); applyPreviewChange(true); await sleep(1400, t);
+    }}
+];
+
+function ripple(x, y){
+  const r = document.createElement('div'); r.className = 'ripple';
+  r.style.left = x + 'px'; r.style.top = y + 'px'; $('preview').appendChild(r);
+  setTimeout(() => r.remove(), 800);
+}
+function setNote(html){ $('noteJs').innerHTML = html; cls('noteJs','on'); }
+function applyPreviewChange(on, animate=true){
+  $('pvH1').textContent = on ? 'やること（2件）' : 'やること';
+  cls('pvH1','hl', on);
+  $('pvLi2').style.display = on ? '' : 'none';
+  if (on && animate){ ['pvH1','pvLi2'].forEach(id => { cls(id,'flashbg',false); void $(id).offsetWidth; cls(id,'flashbg'); }); }
+}
+
+STEPS.forEach((s, i) => {
+  const d = document.createElement('div'); d.className = 'step';
+  d.innerHTML = `<span class="n">${i+1}</span><span class="l">${s.l}</span>`;
+  d.onclick = () => jump(i); $('steps').appendChild(d);
+});
+
+/* ===========================================
+   STATE — 「k番目の場面まで終わった」状態を画面に反映
+   =========================================== */
+function render(k){
+  ['cHtml','cCss','cJs','tree','preview','arHtml','arCss','arView','arJs','noteCss','noteJs'].forEach(id => cls(id,'act',false));
+  cls('noteCss','on',false); cls('noteJs','on',false);
+  $('noteJs').textContent = k >= 3 ? 'クリック後の処理を実行しました' : 'クリックされるまで待機中…';
+  ['codeHtml','codeCss','codeJs'].forEach(id => hlLines(id, []));
+  NODES.forEach(n => nodeOn(n.id, k >= 0 && (!n.isNew || k >= 4)));
+  cls('n-h1','styled', k >= 1); cls('n-button','styled', k >= 1);
+  $('pvBlank').style.opacity = k >= 2 ? 0 : 1;
+  cls('cursor','on', k === 3);
+  if (k !== 3){ $('cursor').style.left = '380px'; $('cursor').style.top = '240px'; }
+  document.querySelectorAll('.node').forEach(n => n.classList.remove('flash','evt'));
+  cls('n-button','evt', k === 3);
+  $('t-h1').textContent = k >= 4 ? '"やること（2件）"' : '"やること"';
+  cls('t-h1','chg', k >= 4); cls('n-h1','hlc', k >= 4);
+  ['tg-text','tg-class','tg-add'].forEach(id => cls(id,'on', k === 4 || k === 5));
+  applyPreviewChange(k >= 5, false);
+}
+function setStep(i){
+  current = i;
+  $('capNo').textContent = i + 1;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { tx.innerHTML = STEPS[i].cap; tx.classList.remove('fade'); }, 180);
+  [...$('steps').children].forEach((el, j) => { el.classList.toggle('past', j < i); el.classList.toggle('now', j === i); });
+}
+
+/* ===========================================
+   PLAYER — 自動再生（ループ）・一時停止・ジャンプ
+   =========================================== */
+async function play(from, once=false){
+  const t = ++token; let i = from;
+  try{
+    while (true){
+      setStep(i); render(i - 1);
+      await STEPS[i].run(t);
+      if (once || !playing) return;
+      await sleep(i === STEPS.length - 1 ? 4000 : 1500, t);
+      render(i);
+      i = (i + 1) % STEPS.length;
+    }
+  }catch(e){ /* キャンセル */ }
+}
+function setPlaying(v){ playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生'; }
+function togglePlay(){
+  if (playing){ setPlaying(false); token++; render(current); }
+  else { setPlaying(true); play((current + 1) % STEPS.length); }
+}
+function jump(i){ i = (i + STEPS.length) % STEPS.length; play(i, !playing); }
+$('btnPlay').onclick = togglePlay;
+$('btnReplay').onclick = () => { setPlaying(true); play(0); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); togglePlay(); }
+  if (e.key === 'ArrowRight') jump(current + 1);
+  if (e.key === 'ArrowLeft') jump(current - 1);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit]').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'dom-overview.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+render(-1);
+setTimeout(() => play(0), 900);
+</script>
+</body>
+</html>
