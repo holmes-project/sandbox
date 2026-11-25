@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>基本設計ってなに？ 何を設計するの？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#5aa2ff;   /* 基本設計（主役） */
+  --req:#ffb547;      /* 要件定義とのつながり */
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(700px 300px at 960px 250px, rgba(90,162,255,.10), transparent 70%),
+    radial-gradient(800px 500px at 1240px 700px, rgba(90,162,255,.06), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:66px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — 基本設計をひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:182px;height:140px;border-radius:20px;background:linear-gradient(90deg,#0e1b33,#121827 60%);border:2px solid rgba(90,162,255,.6);display:flex;align-items:center;padding:0 34px;gap:34px;box-shadow:0 0 50px rgba(90,162,255,.08)}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:8px}
+.hero-l .lb{font-size:18px;font-weight:900;color:#06101f;background:var(--accent);border-radius:8px;padding:4px 12px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:38px;color:var(--accent);line-height:1}
+.hero-msg{font-size:34px;font-weight:900;line-height:1.4;flex:1}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(90,162,255,.5) 62%);color:#fff;padding:0 2px}
+.hero-flow{flex:none;display:flex;align-items:center;gap:10px}
+.doc{width:124px;height:92px;border-radius:12px;background:#0d1320;border:1.5px solid #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-size:15px;font-weight:900;color:var(--muted)}
+.doc .ic{font-size:28px;line-height:1}
+.doc.now{border-color:var(--accent);background:#0f1d36;color:var(--accent)}
+.doc small{font-size:12.5px;font-weight:700;color:var(--muted)}
+.harr{color:var(--accent);font-size:20px}
+
+/* ===========================================
+   ITEM LIST — 基本設計で決める項目
+   =========================================== */
+.list-h{position:absolute;left:90px;top:346px;font-size:20px;font-weight:900;color:var(--muted)}
+.list{position:absolute;left:90px;top:380px;width:520px;display:flex;flex-direction:column;gap:9px}
+.it{position:relative;height:98px;border-radius:14px;background:var(--panel);border:2px solid #1f2a40;padding:12px 18px 12px 84px;cursor:pointer;overflow:hidden;transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.it:hover{border-color:color-mix(in srgb,var(--c) 60%,#1f2a40)}
+.it .ic{position:absolute;left:16px;top:50%;width:52px;height:52px;margin-top:-26px;border-radius:12px;background:color-mix(in srgb,var(--c) 18%,#0c1220);display:flex;align-items:center;justify-content:center;font-size:26px}
+.it b{display:block;font-size:24px;font-weight:900;color:var(--c)}
+.it p{font-size:16.5px;font-weight:700;color:#c9d4ee;line-height:1.4;margin-top:3px}
+.it .bar{position:absolute;left:0;bottom:0;height:4px;width:0;background:var(--c)}
+.it.act{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,#111827);transform:translateX(10px)}
+.it.act .bar{animation:bar var(--dur) linear forwards}
+.paused .it.act .bar{animation-play-state:paused}
+@keyframes bar{to{width:100%}}
+
+/* ===========================================
+   EXAMPLE PANEL — 具体例
+   =========================================== */
+.ex{position:absolute;left:650px;top:346px;width:1180px;height:688px;border-radius:20px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 55%,#1f2a40);transition:border-color .4s;overflow:hidden}
+.ex-top{position:absolute;left:28px;right:28px;top:20px;display:flex;align-items:baseline;gap:16px}
+.ex-top .lb{font-size:16px;font-weight:900;color:#0a0e16;background:var(--c);border-radius:6px;padding:3px 10px;transition:background .4s}
+.ex-top b{font-size:32px;font-weight:900;color:var(--c);transition:color .4s}
+.ex-top span{font-size:18px;color:var(--muted);font-weight:700}
+.pane{position:absolute;left:28px;right:28px;top:76px;height:520px;opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease);pointer-events:none}
+.pane.on{opacity:1;transform:none;pointer-events:auto}
+.link{position:absolute;left:28px;right:28px;bottom:18px;height:56px;border-radius:12px;background:#1d170c;border:1.5px solid rgba(255,181,71,.5);display:flex;align-items:center;gap:14px;padding:0 18px;font-size:19px;font-weight:700}
+.link i{font-style:normal;flex:none;font-size:14px;font-weight:900;color:#1a1205;background:var(--req);border-radius:6px;padding:3px 9px}
+.link b{color:var(--req)}
+
+/* 共通パーツ */
+.mono{font-family:var(--font-code)}
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th,.tbl td{font-size:16.5px;padding:9px 12px;text-align:left;border-bottom:1px solid #1f2a40;vertical-align:middle}
+.tbl th{font-size:15px;color:var(--muted);font-weight:900;border-bottom:2px solid #2a3858}
+.tbl td{font-weight:700;color:#d7def0}
+.num{display:inline-flex;width:26px;height:26px;border-radius:50%;background:var(--c);color:#0a0e16;font-size:15px;font-weight:900;align-items:center;justify-content:center}
+
+/* --- 1. 画面設計 --- */
+.wire{position:absolute;left:0;top:0;width:560px;height:500px;border-radius:14px;background:#e9edf3;overflow:hidden;color:#334}
+.w-bar{height:58px;background:#cfd6e2;display:flex;align-items:center;gap:14px;padding:0 16px}
+.w-logo{width:90px;height:28px;border-radius:6px;background:#9aa6ba;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff}
+.w-search{flex:1;height:34px;border-radius:8px;background:#fff;border:2px dashed #7d8aa3;display:flex;align-items:center;padding:0 10px;font-size:14px;color:#8a95aa;position:relative}
+.w-cart{width:74px;height:34px;border-radius:8px;background:#fff;border:2px dashed #7d8aa3;font-size:14px;display:flex;align-items:center;justify-content:center;position:relative}
+.w-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:18px 16px}
+.w-card{height:192px;border-radius:10px;background:#fff;border:2px solid #cfd6e2;padding:10px;display:flex;flex-direction:column;gap:6px;position:relative}
+.w-img{height:84px;border-radius:6px;background:repeating-linear-gradient(45deg,#dfe4ec 0 8px,#eef1f6 8px 16px)}
+.w-l{height:12px;border-radius:4px;background:#c4ccd9}
+.w-l.s{width:60%}
+.w-btn{margin-top:auto;height:30px;border-radius:6px;background:#7d8aa3;color:#fff;font-size:12.5px;font-weight:900;display:flex;align-items:center;justify-content:center;position:relative}
+.w-btn.off{background:#c4ccd9;color:#8a95aa}
+.pin{position:absolute;top:-12px;right:-12px;width:26px;height:26px;border-radius:50%;background:var(--c);color:#0a0e16;font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px #e9edf3;z-index:2}
+.wire-cap{position:absolute;left:0;top:-2px}
+.side{position:absolute;left:590px;right:0;top:0}
+.side-h{font-size:19px;font-weight:900;margin-bottom:8px}
+
+/* --- 2. 画面遷移設計 --- */
+.flow{position:absolute;inset:0}
+.flow svg{position:absolute;inset:0;width:1124px;height:520px;max-width:none;max-height:none}
+.sc{position:absolute;width:168px;height:104px;border-radius:12px;background:#0c1220;border:2px solid var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:20px;font-weight:900}
+.sc small{font-size:13px;color:var(--muted);font-weight:700}
+.sc.alt{border-style:dashed;border-color:#ff9f5a}
+.sc .bar2{width:120px;height:8px;border-radius:4px;background:#22304a}
+.elab{position:absolute;font-size:15px;font-weight:900;color:var(--c);background:#111827;padding:2px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-50%)}
+.elab.alt{color:#ff9f5a}
+.dot{fill:var(--c)}
+
+/* --- 3. 機能設計 --- */
+.ipo{position:absolute;left:0;right:0;top:268px;display:flex;align-items:stretch;gap:14px}
+.ipo-h{position:absolute;left:0;top:232px;font-size:19px;font-weight:900}
+.ipo-h em{font-style:normal;color:var(--c)}
+.box{flex:1;border-radius:12px;background:#0c1220;border:1.5px solid #2a3858;padding:12px 16px}
+.box h4{font-size:17px;font-weight:900;margin-bottom:6px}
+.box li{font-size:16px;font-weight:700;color:#d7def0;line-height:1.55;list-style:none}
+.box li::before{content:'・';color:var(--c)}
+.box.mid{flex:1.3;border-color:var(--c)}
+.box.mid li{counter-increment:s}
+.box.mid li::before{content:counter(s) '. ';font-family:var(--font-code)}
+.box.mid ol{counter-reset:s}
+.ar{align-self:center;font-size:26px;color:var(--c)}
+
+/* --- 4. データ設計 --- */
+.ent{position:absolute;width:228px;border-radius:12px;background:#0c1220;border:2px solid var(--c);overflow:hidden}
+.ent h4{font-size:19px;font-weight:900;background:color-mix(in srgb,var(--c) 22%,#0c1220);padding:8px 14px;display:flex;justify-content:space-between;align-items:baseline}
+.ent h4 small{font-family:var(--font-code);font-size:13px;color:var(--muted)}
+.ent li{list-style:none;font-size:16px;font-weight:700;padding:6px 14px;border-top:1px solid #1f2a40;display:flex;justify-content:space-between}
+.ent li span{font-family:var(--font-code);font-size:13px;color:var(--muted)}
+.ent li.pk{color:var(--c)}
+.rel{position:absolute;font-size:15px;font-weight:900;color:var(--c)}
+.data-note{position:absolute;left:0;right:0;top:260px;font-size:19px!important;font-size:17px;font-weight:700;color:var(--muted);line-height:1.6}
+.data-note b{color:var(--c)}
+
+/* --- 5. 外部連携設計 --- */
+.hub{position:absolute;left:432px;top:178px;width:260px;height:120px;border-radius:16px;background:color-mix(in srgb,var(--c) 18%,#0c1220);border:2.5px solid var(--c);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;font-weight:900}
+.hub small{font-size:14px;color:var(--muted)}
+.extn{position:absolute;width:250px;height:96px;border-radius:14px;background:#0c1220;border:2px dashed #6b7895;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:20px;font-weight:900}
+.extn small{font-size:13px;color:var(--muted);font-weight:700}
+.io{position:absolute;font-size:15px;font-weight:700;line-height:1.5;color:#d7def0}
+.io b{color:var(--c)}
+
+/* --- 6. システム構成設計 --- */
+.node{position:absolute;width:170px;height:112px;border-radius:14px;background:#0c1220;border:2px solid #34415f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:18px;font-weight:900;text-align:center}
+.node .ic2{font-size:30px;line-height:1}
+.node small{font-size:13px;color:var(--muted);font-weight:700}
+.node.srv{border-color:var(--c)}
+.cloud{position:absolute;left:300px;top:40px;width:824px;height:330px;border-radius:24px;border:2px dashed color-mix(in srgb,var(--c) 50%,#2a3858)}
+.cloud span{position:absolute;left:18px;top:-14px;background:var(--panel);padding:0 10px;font-size:15px;font-weight:900;color:var(--c)}
+.nf{position:absolute;font-size:15px;font-weight:900;color:#1a1205;background:var(--req);border-radius:8px;padding:5px 10px;white-space:nowrap}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#06101f}
+body.editing [data-edit]{outline:1.5px dashed rgba(90,162,255,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>BASIC DESIGN <span>／ 要件定義の次の工程（外部設計とも呼ぶ）</span></div>
+      <h1 class="title" data-edit><em>基本設計</em>ってなに？ 何を設計するの？</h1>
+    </div>
+    <button class="btn" id="btnPlay">⏸ 一時停止</button>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">基本設計 ＝</span></div>
+    <div class="hero-msg" data-edit>要件定義で決めた「やりたいこと」を、<br><mark>使う人から見える形</mark>（画面・機能・データ）に決めること</div>
+    <div class="hero-flow">
+      <div class="doc"><span class="ic">📄</span>要件定義書<small>何を作る？</small></div>
+      <span class="harr">▶</span>
+      <div class="doc now"><span class="ic">📐</span>基本設計書<small>どう見える？</small></div>
+      <span class="harr">▶</span>
+      <div class="doc"><span class="ic">🔧</span>詳細設計書<small>どう作る？</small></div>
+    </div>
+  </div>
+
+  <!-- === ITEM LIST === -->
+  <div class="list-h reveal d3" data-edit>基本設計で決める6つのこと（クリックで切り替え）</div>
+  <div class="list reveal d3" id="list"></div>
+
+  <!-- === EXAMPLE PANEL === -->
+  <div class="ex reveal d4" id="ex">
+    <div class="ex-top"><span class="lb">具体例</span><b id="exTitle"></b><span id="exSub"></span></div>
+
+    <!-- 1. 画面設計 -->
+    <div class="pane" data-i="0">
+      <div class="wire">
+        <div class="w-bar"><span class="w-logo">LOGO</span><span class="w-search">キーワードを入力 🔍<span class="pin">1</span></span><span class="w-cart">🛒 2<span class="pin">4</span></span></div>
+        <div class="w-grid">
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn">カートに入れる<span class="pin">3</span></div><span class="pin" style="left:-12px;right:auto">2</span></div>
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn">カートに入れる</div></div>
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn off">在庫なし</div></div>
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn">カートに入れる</div></div>
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn">カートに入れる</div></div>
+          <div class="w-card"><div class="w-img"></div><div class="w-l"></div><div class="w-l s"></div><div class="w-btn">カートに入れる</div></div>
+        </div>
+      </div>
+      <div class="side">
+        <div class="side-h">画面項目の決めごと <span style="color:var(--muted);font-size:16px">（商品一覧画面）</span></div>
+        <table class="tbl">
+          <tr><th>No</th><th>項目</th><th>種類</th><th>ルール</th></tr>
+          <tr><td><span class="num">1</span></td><td>検索欄</td><td>入力欄</td><td>50文字まで・空でもOK</td></tr>
+          <tr><td><span class="num">2</span></td><td>商品カード</td><td>表示</td><td>写真・名前・価格を表示<br>1ページ 20件</td></tr>
+          <tr><td><span class="num">3</span></td><td>カートに入れる</td><td>ボタン</td><td>在庫0なら押せない<br>（「在庫なし」と表示）</td></tr>
+          <tr><td><span class="num">4</span></td><td>カートアイコン</td><td>表示</td><td>カート内の数を表示</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- 2. 画面遷移設計 -->
+    <div class="pane" data-i="1">
+      <div class="flow" id="flowBox">
+        <svg id="flowSvg" viewBox="0 0 1124 520"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#4fe3f0"/></marker><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff9f5a"/></marker></defs></svg>
+      </div>
+    </div>
+
+    <!-- 3. 機能設計 -->
+    <div class="pane" data-i="2">
+      <table class="tbl">
+        <tr><th>ID</th><th>機能名</th><th>だれが使う</th><th>概要</th></tr>
+        <tr><td class="mono">F-01</td><td>商品検索</td><td>お客さま</td><td>キーワードで商品を探し、一覧に表示する</td></tr>
+        <tr><td class="mono">F-02</td><td>カート追加</td><td>お客さま</td><td>選んだ商品と個数をカートに入れる</td></tr>
+        <tr style="background:color-mix(in srgb,var(--c) 12%,transparent)"><td class="mono">F-03</td><td>注文確定</td><td>お客さま</td><td>在庫と支払いを確認し、注文を登録する</td></tr>
+        <tr><td class="mono">F-04</td><td>商品登録</td><td>お店の人</td><td>商品の名前・価格・在庫数を登録する</td></tr>
+      </table>
+      <div class="ipo-h">F-03「<em>注文確定</em>」の中身を <em>入力 → 処理 → 出力</em> で整理</div>
+      <div class="ipo">
+        <div class="box"><h4>📥 入力</h4><ul><li>カートの中身</li><li>届け先の住所</li><li>カード情報</li></ul></div>
+        <span class="ar">▶</span>
+        <div class="box mid"><h4>⚙️ 処理</h4><ol><li>在庫があるか確認</li><li>カード決済をする</li><li>注文データを保存</li><li>確認メールを送る</li></ol></div>
+        <span class="ar">▶</span>
+        <div class="box"><h4>📤 出力</h4><ul><li>注文完了画面</li><li>注文確認メール</li><li>（エラー時）在庫切れ表示</li></ul></div>
+      </div>
+    </div>
+
+    <!-- 4. データ設計 -->
+    <div class="pane" data-i="3">
+      <svg style="position:absolute;inset:0;width:1124px;height:520px;max-width:none;max-height:none" viewBox="0 0 1124 520">
+        <g stroke="#ffd36b" stroke-width="2.5" fill="none">
+          <path d="M228 90 H300"/><path d="M528 90 H600"/><path d="M828 90 H896"/>
+        </g>
+      </svg>
+      <div class="ent" style="left:0;top:20px"><h4>会員 <small>members</small></h4><ul><li class="pk">🔑 会員ID<span>数字</span></li><li>氏名<span>文字</span></li><li>メールアドレス<span>文字</span></li><li>住所<span>文字</span></li></ul></div>
+      <div class="ent" style="left:300px;top:20px"><h4>注文 <small>orders</small></h4><ul><li class="pk">🔑 注文ID<span>数字</span></li><li>会員ID<span>数字</span></li><li>注文日時<span>日時</span></li><li>合計金額<span>数字</span></li></ul></div>
+      <div class="ent" style="left:600px;top:20px"><h4>注文明細 <small>items</small></h4><ul><li class="pk">🔑 明細ID<span>数字</span></li><li>注文ID<span>数字</span></li><li>商品ID<span>数字</span></li><li>個数<span>数字</span></li></ul></div>
+      <div class="ent" style="left:896px;top:20px"><h4>商品 <small>products</small></h4><ul><li class="pk">🔑 商品ID<span>数字</span></li><li>商品名<span>文字</span></li><li>価格<span>数字</span></li><li>在庫数<span>数字</span></li></ul></div>
+      <div class="rel" style="left:234px;top:58px">1</div><div class="rel" style="left:276px;top:58px">多</div>
+      <div class="rel" style="left:534px;top:58px">1</div><div class="rel" style="left:576px;top:58px">多</div>
+      <div class="rel" style="left:834px;top:58px">多</div><div class="rel" style="left:872px;top:58px">1</div>
+      <div class="data-note" data-edit>
+        <b>どんなデータを・どの表に・どんな項目で</b>保存するかを決めます（表どうしのつながりも）。<br>
+        ・1人の<b>会員</b>は、何回も<b>注文</b>できる（1 対 多）<br>
+        ・1回の<b>注文</b>には、いくつもの<b>商品</b>が入る → 間に「注文明細」を置いて整理<br>
+        ・🔑 は、そのデータを1つに特定するための番号（主キー）
+      </div>
+    </div>
+
+    <!-- 5. 外部連携設計 -->
+    <div class="pane" data-i="4">
+      <svg style="position:absolute;inset:0;width:1124px;height:520px;max-width:none;max-height:none" viewBox="0 0 1124 520">
+        <g stroke="#ff9f5a" stroke-width="2.5" fill="none" stroke-dasharray="8 6">
+          <path d="M432 238 H250"/><path d="M692 238 H874"/><path d="M562 298 V400"/>
+        </g>
+      </svg>
+      <div class="hub"><small>自分たちのシステム</small>ネットショップ</div>
+      <div class="extn" style="left:0;top:190px"><small>外部サービス</small>💳 カード決済会社</div>
+      <div class="extn" style="left:874px;top:190px"><small>外部サービス</small>✉️ メール配信</div>
+      <div class="extn" style="left:437px;top:400px"><small>外部サービス</small>🚚 配送会社</div>
+      <div class="io" style="left:262px;top:118px"><b>送る ▶</b> カード番号・金額<br><b>◀ 受け取る</b> 決済OK / NG</div>
+      <div class="io" style="left:704px;top:118px"><b>送る ▶</b> 宛先・本文<br><b>タイミング</b> 注文確定のすぐ後</div>
+      <div class="io" style="left:600px;top:318px"><b>送る ▶</b> 届け先・商品（1日1回 CSV）<br><b>◀ 受け取る</b> 配送番号</div>
+      <div class="io" style="left:0;top:20px;font-size:17px;color:var(--muted)">外のシステムと<b>「何を・どんな形で・いつ」</b>やり取りするかを決めます</div>
+    </div>
+
+    <!-- 6. システム構成設計 -->
+    <div class="pane" data-i="5">
+      <svg style="position:absolute;inset:0;width:1124px;height:520px;max-width:none;max-height:none" viewBox="0 0 1124 520">
+        <g stroke="#2ee6a8" stroke-width="2.5" fill="none">
+          <path d="M170 200 H330"/><path d="M500 200 H560"/><path d="M560 200 V130 H600"/><path d="M560 200 V270 H600"/>
+          <path d="M770 130 H820 V200 H860"/><path d="M770 270 H820 V200"/><path d="M945 256 V300"/>
+        </g>
+      </svg>
+      <div class="node" style="left:0;top:144px"><span class="ic2">📱💻</span>利用者<small>スマホ・PC</small></div>
+      <div class="cloud"><span>☁ クラウド上に作る</span></div>
+      <div class="node srv" style="left:330px;top:144px"><span class="ic2">🔀</span>振り分け装置<small>ロードバランサ</small></div>
+      <div class="node srv" style="left:600px;top:74px"><span class="ic2">🖥️</span>Webサーバ①</div>
+      <div class="node srv" style="left:600px;top:214px"><span class="ic2">🖥️</span>Webサーバ②</div>
+      <div class="node srv" style="left:860px;top:144px"><span class="ic2">🗄️</span>DBサーバ<small>データを保存</small></div>
+      <div class="node" style="left:860px;top:300px;height:62px;flex-direction:row;gap:10px">💾 バックアップ</div>
+      <div class="nf" style="left:0;top:392px">「1万人が同時でも動く」→ サーバを2台に分担</div>
+      <div class="nf" style="left:0;top:436px">「24時間止めない」→ 1台壊れても、もう1台で動く</div>
+      <div class="nf" style="left:0;top:480px">「毎日バックアップ」→ バックアップ先を用意</div>
+      <div class="io" style="left:0;top:0;font-size:17px;color:var(--muted)">どんな<b>サーバ・ネットワーク</b>で動かすかを決めます（<b>非機能要件</b>をここで形にする）</div>
+    </div>
+
+    <div class="link"><i>要件定義とのつながり</i><span id="exLink"></span></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   ITEMS — 基本設計で決める項目（文言はここで編集）
+   =========================================== */
+const ITEMS = [
+  { name:'画面設計', ic:'🖼️', c:'#5aa2ff', desc:'画面に何を・どこに置くか、入力のルール',
+    title:'ネットショップの「商品一覧画面」', sub:'画面のレイアウトと、各項目の決めごと',
+    link:'要件「商品を<b>検索できる</b>」「<b>カートに入れられる</b>」→ 検索欄とボタンとして画面に置く' },
+  { name:'画面遷移設計', ic:'🔀', c:'#4fe3f0', desc:'どの画面から、どの画面へ移るか',
+    title:'買い物の流れ（画面遷移図）', sub:'どの操作で、どの画面に移るか',
+    link:'要件「<b>クレジットカードで支払いできる</b>」→ カート → 注文確認 → 注文完了 の流れで実現' },
+  { name:'機能設計', ic:'⚙️', c:'#2ee6a8', desc:'システムが持つ機能と、その中身',
+    title:'機能一覧と、機能の中身', sub:'機能の一覧と「入力 → 処理 → 出力」',
+    link:'要件「注文すると<b>確認メールが届く</b>」→ 注文確定（F-03）の処理の4番目に入れる' },
+  { name:'データ設計', ic:'🗄️', c:'#f4d03f', desc:'どんなデータを、どんな形で保存するか',
+    title:'保存するデータの表とつながり', sub:'データベースの表（テーブル）と項目',
+    link:'要件「過去の<b>注文履歴を見られる</b>」→ 注文データを会員とつなげて保存しておく' },
+  { name:'外部連携設計', ic:'🔌', c:'#ff9f5a', desc:'外のシステムと、何をやり取りするか',
+    title:'外部サービスとのやり取り', sub:'相手・やり取りする中身・タイミング',
+    link:'要件「<b>クレジットカードで支払い</b>」→ 決済は専門の外部サービスにお願いする' },
+  { name:'システム構成設計', ic:'🏗️', c:'#2ee6a8', desc:'どんなサーバ・ネットワークで動かすか',
+    title:'システムの構成図', sub:'サーバの数・役割・つながり',
+    link:'非機能要件「<b>1万人が同時</b>」「<b>24時間365日</b>」「<b>毎日バックアップ</b>」をここで実現' }
+];
+ITEMS[5].c = '#ff7ab6';
+
+/* 左の一覧を作る */
+ITEMS.forEach((it, i) => {
+  const d = document.createElement('div');
+  d.className = 'it'; d.style.setProperty('--c', it.c);
+  d.innerHTML = `<span class="ic">${it.ic}</span><b>${it.name}</b><p>${it.desc}</p><span class="bar"></span>`;
+  d.onclick = () => { show(i); restart(); };
+  $('list').appendChild(d);
+});
+
+/* ===========================================
+   画面遷移図（2. 画面遷移設計）
+   =========================================== */
+(function(){
+  const box = $('flowBox'), svg = $('flowSvg'), NS = 'http://www.w3.org/2000/svg';
+  const S = { top:[0,40,'トップ'], list:[240,40,'商品一覧'], detail:[480,40,'商品詳細'], cart:[720,40,'カート'],
+              login:[720,300,'ログイン'], confirm:[956,170,'注文確認'], done:[956,370,'注文完了'] };
+  for (const [k,[x,y,n]] of Object.entries(S)){
+    const d = document.createElement('div'); d.className = 'sc' + (k==='login' ? ' alt' : '');
+    d.style.left = x + 'px'; d.style.top = y + 'px';
+    d.innerHTML = `${n}<span class="bar2"></span><small>${k==='login'?'条件つき':'画面'}</small>`;
+    box.appendChild(d);
+  }
+  const E = [ // [path, label, lx, ly, alt]
+    ['M168 92 H240','検索',204,22],
+    ['M408 92 H480','商品を選ぶ',444,22],
+    ['M648 92 H720','カートに入れる',684,22],
+    ['M888 92 H1040 V170','レジへ進む',990,72],
+    ['M804 144 V300','未ログインなら',860,222,1],
+    ['M888 352 H930 V222 H956','ログイン後',920,380,1],
+    ['M1040 274 V370','注文する',1090,322]
+  ];
+  E.forEach(([d,l,x,y,alt]) => {
+    const p = document.createElementNS(NS,'path');
+    p.setAttribute('d', d); p.setAttribute('fill','none');
+    p.setAttribute('stroke', alt ? '#ff9f5a' : '#4fe3f0'); p.setAttribute('stroke-width','3');
+    if (alt) p.setAttribute('stroke-dasharray','8 6');
+    p.setAttribute('marker-end', `url(#${alt?'ah2':'ah'})`);
+    svg.appendChild(p);
+    const t = document.createElement('div'); t.className = 'elab' + (alt ? ' alt' : '');
+    t.style.left = x + 'px'; t.style.top = y + 'px'; t.textContent = l; box.appendChild(t);
+  });
+  const note = document.createElement('div');
+  note.className = 'io'; note.style.cssText = 'left:0;top:200px;font-size:17px;color:var(--muted);width:620px;line-height:1.7';
+  note.innerHTML = '・<b>実線</b>：ふつうの流れ<br>・<b style="color:#ff9f5a">点線</b>：条件があるときだけの流れ<br>・「戻る」ボタンで前の画面へ戻れるか、なども決めます';
+  box.appendChild(note);
+})();
+
+/* ===========================================
+   SHOW / PLAYER — 自動で順番に切り替え（クリックでも可）
+   =========================================== */
+const DUR = 8000;
+document.documentElement.style.setProperty('--dur', DUR + 'ms');
+let cur = 0, timer = null, playing = true;
+function show(i){
+  cur = (i + ITEMS.length) % ITEMS.length; const it = ITEMS[cur];
+  [...$('list').children].forEach((el, j) => {
+    el.classList.remove('act'); void el.offsetWidth;
+    if (j === cur) el.classList.add('act');
+  });
+  $('ex').style.setProperty('--c', it.c);
+  $('exTitle').textContent = `${it.name}：${it.title}`;
+  $('exSub').textContent = it.sub;
+  $('exLink').innerHTML = it.link;
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', +p.dataset.i === cur));
+}
+function restart(){ clearInterval(timer); if (playing) timer = setInterval(() => show(cur + 1), DUR); }
+function setPlaying(v){
+  playing = v; $('slide').classList.toggle('paused', !v);
+  $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v){ show(cur); } restart();
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight'){ show(cur + 1); restart(); }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowLeft'){ show(cur - 1); restart(); }
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .tbl td').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'basic-design.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+show(0); restart();
+</script>
+</body>
+</html>

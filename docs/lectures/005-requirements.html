@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>要件定義ってなに？ 機能要件と非機能要件</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#ffb547;   /* 要件定義（主役） */
+  --func:#5aa2ff;     /* 機能要件 */
+  --nonf:#ff7ab6;     /* 非機能要件 */
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(560px 420px at 480px 620px, rgba(90,162,255,.09), transparent 70%),
+    radial-gradient(560px 420px at 1420px 620px, rgba(255,122,182,.08), transparent 70%),
+    radial-gradient(700px 200px at 960px 260px, rgba(255,181,71,.08), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:66px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+
+/* ===========================================
+   HERO — 要件定義をひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:182px;height:150px;border-radius:20px;background:linear-gradient(90deg,#221a0c,#121827 60%);border:2px solid rgba(255,181,71,.55);display:flex;align-items:center;padding:0 36px;gap:36px;box-shadow:0 0 50px rgba(255,181,71,.08)}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:8px}
+.hero-l .lb{font-size:18px;font-weight:900;color:#1a1205;background:var(--accent);border-radius:8px;padding:4px 12px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:38px;color:var(--accent);line-height:1}
+.hero-msg{font-size:38px;font-weight:900;line-height:1.35;flex:1}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(255,181,71,.45) 62%);color:#fff;padding:0 4px}
+.hero-flow{flex:none;display:flex;align-items:center;gap:12px}
+.who{width:132px;height:104px;border-radius:14px;background:#0d1320;border:1.5px solid #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+.who .ic{font-size:34px;line-height:1}
+.who b{font-size:17px;font-weight:900}
+.who small{font-size:13px;color:var(--muted);font-weight:700;line-height:1.3}
+.who.doc{border-color:var(--accent);background:#1f190d}
+.who.doc b{color:var(--accent)}
+.flow-ar{font-size:22px;color:var(--accent);animation:nudge .9s ease-in-out infinite alternate}
+@keyframes nudge{to{transform:translateX(5px)}}
+.flow-ar.l{animation-name:nudgeL}
+@keyframes nudgeL{to{transform:translateX(-5px)}}
+
+/* ===========================================
+   TWO COLUMNS — 機能要件 / 非機能要件
+   =========================================== */
+.col{position:absolute;top:360px;width:840px;height:520px;border-radius:20px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 45%,#1f2a40);padding:22px 26px;--c:var(--func)}
+.col.f{left:90px}
+.col.n{left:990px;--c:var(--nonf)}
+.col-h{display:flex;align-items:center;gap:16px}
+.col-h .tg{font-family:var(--font-code);font-weight:700;font-size:16px;color:#0a0e16;background:var(--c);border-radius:6px;padding:4px 10px}
+.col-h b{font-weight:900;font-size:38px;color:var(--c)}
+.col-h .q{margin-left:auto;font-size:20px;font-weight:900;color:#fff;background:color-mix(in srgb,var(--c) 22%,#0d1320);border:1.5px solid var(--c);border-radius:999px;padding:6px 18px}
+.col-d{font-size:21px;font-weight:700;line-height:1.5;color:#d7def0;margin:10px 0 8px}
+.col-d b{color:var(--c)}
+.tip{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:700;color:var(--muted);margin-bottom:10px}
+.tip i{font-style:normal;font-size:14px;font-weight:900;color:var(--c);border:1.5px solid var(--c);border-radius:6px;padding:2px 8px}
+.tip code{font-family:var(--font-body);color:#fff;font-weight:900;background:#1b2538;border-radius:6px;padding:2px 8px}
+.ex-h{font-size:16px;font-weight:900;color:var(--muted);letter-spacing:.06em;margin-bottom:8px}
+.items{display:flex;flex-direction:column;gap:6px}
+.item{height:40px;border-radius:10px;background:#0c1220;border:1.5px solid #222d45;display:flex;align-items:center;gap:14px;padding:0 16px;font-size:19px;font-weight:700;opacity:0;transform:translateX(-16px);transition:opacity .5s var(--ease),transform .5s var(--ease),border-color .3s,background .3s}
+.item.on{opacity:1;transform:none}
+.item .ck{flex:none;width:24px;height:24px;border-radius:7px;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);font-size:15px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.item .cat{flex:none;width:118px;font-size:15px;font-weight:900;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:6px;padding:3px 0;text-align:center}
+.item em{font-style:normal;color:var(--c);font-weight:900}
+.item.hl{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,#0c1220)}
+.vs{position:absolute;left:930px;top:590px;width:60px;text-align:center;font-family:var(--font-display);font-size:28px;color:#4a5878}
+
+/* ===========================================
+   FOOTER — たとえ と 注意
+   =========================================== */
+.foot{position:absolute;left:90px;right:90px;top:906px;height:130px;display:flex;gap:20px}
+.analogy{flex:1.35;border-radius:18px;background:#0f1626;border:1.5px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 28px}
+.analogy .car{font-size:54px;line-height:1}
+.analogy .an-h{font-size:18px;font-weight:900;color:var(--muted);margin-bottom:6px}
+.analogy .an-r{display:flex;gap:28px;font-size:22px;font-weight:900}
+.analogy .an-r span{display:flex;align-items:center;gap:10px}
+.analogy .an-r i{font-style:normal;font-size:15px;color:#0a0e16;border-radius:6px;padding:3px 8px}
+.warn{flex:1;border-radius:18px;background:#1d1218;border:1.5px solid rgba(255,122,182,.5);display:flex;align-items:center;gap:18px;padding:0 26px}
+.warn .ic{font-size:40px;line-height:1}
+.warn p{font-size:20px;font-weight:700;line-height:1.5}
+.warn b{color:var(--nonf)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.4s}.slide.visible .d4{transition-delay:.6s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1205}
+body.editing [data-edit]{outline:1.5px dashed rgba(255,181,71,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div class="kicker" data-edit>REQUIREMENTS DEFINITION <span>／ 開発のいちばん最初の工程</span></div>
+    <h1 class="title" data-edit><em>要件定義</em>ってなに？ 機能要件と非機能要件</h1>
+  </header>
+
+  <!-- === HERO: ひとことで === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">要件定義 ＝</span></div>
+    <div class="hero-msg" data-edit>お客さまと<mark>「何を作るか」を決めて約束</mark>し、<br>文書にまとめること</div>
+    <div class="hero-flow">
+      <div class="who"><span class="ic">🙋</span><b>お客さま</b><small>こんなことが<br>したい！</small></div>
+      <span class="flow-ar">▶</span>
+      <div class="who doc"><span class="ic">📄</span><b>要件定義書</b><small>作るものの<br>約束ごと</small></div>
+      <span class="flow-ar l">◀</span>
+      <div class="who"><span class="ic">🧑‍💻</span><b>開発者</b><small>これを<br>作ります</small></div>
+    </div>
+  </div>
+
+  <!-- === 機能要件 === -->
+  <div class="col f reveal d3">
+    <div class="col-h"><span class="tg">FUNCTIONAL</span><b>機能要件</b><span class="q">何ができる？</span></div>
+    <p class="col-d" data-edit>システムが<b>「何をできるか」</b>という、使う人が直接さわる<b>機能</b>の決めごと。<br>ないとそもそも仕事にならない、いわば<b>システムの中身</b>です。</p>
+    <div class="tip"><i>見分け方</i><span>「<code>〜できる</code>」で言い表せるもの</span></div>
+    <div class="ex-h" data-edit>例：ネットショップの場合</div>
+    <div class="items" id="fItems">
+      <div class="item"><span class="ck">✓</span><span>商品を<em>キーワードで検索できる</em></span></div>
+      <div class="item"><span class="ck">✓</span><span>気に入った商品を<em>カートに入れられる</em></span></div>
+      <div class="item"><span class="ck">✓</span><span><em>クレジットカードで支払いできる</em></span></div>
+      <div class="item"><span class="ck">✓</span><span>注文すると<em>確認メールが届く</em></span></div>
+      <div class="item"><span class="ck">✓</span><span>お店の人が<em>商品を登録・変更できる</em></span></div>
+      <div class="item"><span class="ck">✓</span><span>過去の<em>注文履歴を見られる</em></span></div>
+    </div>
+  </div>
+
+  <div class="vs reveal d3">VS</div>
+
+  <!-- === 非機能要件 === -->
+  <div class="col n reveal d3">
+    <div class="col-h"><span class="tg">NON-FUNCTIONAL</span><b>非機能要件</b><span class="q">どれくらい良く？</span></div>
+    <p class="col-d" data-edit>機能<b>以外</b>の、速さ・止まらなさ・安全さなどの<b>品質</b>の決めごと。<br>できるだけ<b>数字</b>で決めるのがポイントです。</p>
+    <div class="tip"><i>見分け方</i><span>「<code>どれくらい速く・安全に・止まらずに</code>」を表すもの</span></div>
+    <div class="ex-h" data-edit>例：ネットショップの場合</div>
+    <div class="items" id="nItems">
+      <div class="item"><span class="cat">性能</span><span>検索結果が<em>3秒以内</em>に表示される</span></div>
+      <div class="item"><span class="cat">可用性</span><span><em>24時間365日</em>使える（止まるのは年数時間まで）</span></div>
+      <div class="item"><span class="cat">セキュリティ</span><span>通信は<em>HTTPS</em>、カード情報は<em>暗号化</em></span></div>
+      <div class="item"><span class="cat">拡張性</span><span>セール時に<em>1万人が同時</em>に来ても動く</span></div>
+      <div class="item"><span class="cat">使いやすさ</span><span><em>スマホ</em>でも迷わず買い物できる</span></div>
+      <div class="item"><span class="cat">運用・保守</span><span>データを<em>毎日バックアップ</em>する</span></div>
+    </div>
+  </div>
+
+  <!-- === FOOTER === -->
+  <div class="foot reveal d4">
+    <div class="analogy">
+      <span class="car">🚗</span>
+      <div>
+        <div class="an-h" data-edit>車でたとえると…</div>
+        <div class="an-r">
+          <span><i style="background:var(--func)">機能</i><span data-edit>走る・曲がる・止まる</span></span>
+          <span><i style="background:var(--nonf)">非機能</i><span data-edit>燃費・安全性・乗り心地</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="warn">
+      <span class="ic">⚠️</span>
+      <p data-edit><b>非機能要件</b>はお客さまが言葉にしにくく<b>見落としがち</b>。<br>後から直すと大変なので、最初に一緒に決めよう！</p>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   ANIMATION — 例を1つずつ表示 → 左右交互にハイライト
+   =========================================== */
+const F = [...$('fItems').children], N = [...$('nItems').children];
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+F.forEach((el, i) => setTimeout(() => el.classList.add('on'), reduce ? 0 : 900 + i * 160));
+N.forEach((el, i) => setTimeout(() => el.classList.add('on'), reduce ? 0 : 1100 + i * 160));
+let k = 0;
+setTimeout(() => setInterval(() => {
+  [...F, ...N].forEach(el => el.classList.remove('hl'));
+  const i = Math.floor(k / 2) % 6;
+  (k % 2 === 0 ? F : N)[i].classList.add('hl');
+  k++;
+}, 1600), 2600);
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .item').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'requirements.html'; a.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>

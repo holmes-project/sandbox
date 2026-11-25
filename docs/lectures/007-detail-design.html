@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>詳細設計ってなに？ 何を設計するの？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#2ee6a8;   /* 詳細設計（主役） */
+  --prev:#5aa2ff;     /* 基本設計とのつながり */
+  --ok:#2ee6a8;
+  --ng:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(700px 300px at 960px 250px, rgba(46,230,168,.09), transparent 70%),
+    radial-gradient(800px 500px at 1240px 700px, rgba(46,230,168,.05), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:66px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — 詳細設計をひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:182px;height:140px;border-radius:20px;background:linear-gradient(90deg,#0c2420,#121827 60%);border:2px solid rgba(46,230,168,.6);display:flex;align-items:center;padding:0 34px;gap:34px;box-shadow:0 0 50px rgba(46,230,168,.07)}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:8px}
+.hero-l .lb{font-size:18px;font-weight:900;color:#04140f;background:var(--accent);border-radius:8px;padding:4px 12px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:38px;color:var(--accent);line-height:1}
+.hero-msg{font-size:33px;font-weight:900;line-height:1.4;flex:1}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(46,230,168,.45) 62%);color:#fff;padding:0 2px}
+.hero-flow{flex:none;display:flex;align-items:center;gap:10px}
+.doc{width:124px;height:92px;border-radius:12px;background:#0d1320;border:1.5px solid #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;font-size:15px;font-weight:900;color:var(--muted)}
+.doc .ic{font-size:28px;line-height:1}
+.doc.now{border-color:var(--accent);background:#0d2620;color:var(--accent)}
+.doc small{font-size:12.5px;font-weight:700;color:var(--muted)}
+.harr{color:var(--accent);font-size:20px}
+
+/* ===========================================
+   ITEM LIST — 詳細設計で決める項目
+   =========================================== */
+.list-h{position:absolute;left:90px;top:346px;font-size:20px;font-weight:900;color:var(--muted)}
+.list{position:absolute;left:90px;top:380px;width:520px;display:flex;flex-direction:column;gap:9px}
+.it{position:relative;height:98px;border-radius:14px;background:var(--panel);border:2px solid #1f2a40;padding:12px 18px 12px 84px;cursor:pointer;overflow:hidden;transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.it:hover{border-color:color-mix(in srgb,var(--c) 60%,#1f2a40)}
+.it .ic{position:absolute;left:16px;top:50%;width:52px;height:52px;margin-top:-26px;border-radius:12px;background:color-mix(in srgb,var(--c) 18%,#0c1220);display:flex;align-items:center;justify-content:center;font-size:26px}
+.it b{display:block;font-size:24px;font-weight:900;color:var(--c)}
+.it p{font-size:16.5px;font-weight:700;color:#c9d4ee;line-height:1.4;margin-top:3px}
+.it .bar{position:absolute;left:0;bottom:0;height:4px;width:0;background:var(--c)}
+.it.act{border-color:var(--c);background:color-mix(in srgb,var(--c) 10%,#111827);transform:translateX(10px)}
+.it.act .bar{animation:bar var(--dur) linear forwards}
+.paused .it.act .bar{animation-play-state:paused}
+@keyframes bar{to{width:100%}}
+
+/* ===========================================
+   EXAMPLE PANEL — 具体例
+   =========================================== */
+.ex{position:absolute;left:650px;top:346px;width:1180px;height:688px;border-radius:20px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 55%,#1f2a40);transition:border-color .4s;overflow:hidden}
+.ex-top{position:absolute;left:28px;right:28px;top:20px;display:flex;align-items:baseline;gap:16px}
+.ex-top .lb{font-size:16px;font-weight:900;color:#0a0e16;background:var(--c);border-radius:6px;padding:3px 10px;transition:background .4s}
+.ex-top b{font-size:32px;font-weight:900;color:var(--c);transition:color .4s}
+.ex-top span{font-size:18px;color:var(--muted);font-weight:700}
+.pane{position:absolute;left:28px;right:28px;top:76px;height:520px;opacity:0;transform:translateY(14px);transition:opacity .5s var(--ease),transform .5s var(--ease);pointer-events:none}
+.pane.on{opacity:1;transform:none;pointer-events:auto}
+.pane svg.full{position:absolute;inset:0;width:1124px;height:520px;max-width:none;max-height:none}
+.link{position:absolute;left:28px;right:28px;bottom:18px;height:56px;border-radius:12px;background:#0d1730;border:1.5px solid rgba(90,162,255,.55);display:flex;align-items:center;gap:14px;padding:0 18px;font-size:19px;font-weight:700}
+.link i{font-style:normal;flex:none;font-size:14px;font-weight:900;color:#06101f;background:var(--prev);border-radius:6px;padding:3px 9px}
+.link b{color:var(--prev)}
+.lead{position:absolute;left:0;right:0;top:0;font-size:17px;font-weight:700;color:var(--muted)}
+.lead b{color:var(--c)}
+
+/* 共通テーブル */
+.mono{font-family:var(--font-code)}
+.tbl{width:100%;border-collapse:separate;border-spacing:0}
+.tbl th,.tbl td{font-size:16.5px;padding:9px 12px;text-align:left;border-bottom:1px solid #1f2a40;vertical-align:middle}
+.tbl th{font-size:15px;color:var(--muted);font-weight:900;border-bottom:2px solid #2a3858}
+.tbl td{font-weight:700;color:#d7def0}
+.tbl td.c{color:var(--c)}
+.ok{color:var(--ok)!important}
+.ng{color:var(--ng)!important}
+
+/* --- 1. モジュール設計 --- */
+.mod{position:absolute;border-radius:12px;background:#0c1220;border:2px solid var(--c);padding:10px 14px;text-align:center}
+.mod b{display:block;font-size:20px;font-weight:900}
+.mod code{display:block;font-family:var(--font-code);font-size:15px;color:var(--c);margin-top:2px}
+.mod small{display:block;font-size:14.5px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.4}
+.mod.top{background:color-mix(in srgb,var(--c) 14%,#0c1220)}
+.tipbox{position:absolute;left:0;right:0;border-radius:12px;background:#0c1a1a;border:1.5px dashed color-mix(in srgb,var(--c) 60%,#1f2a40);padding:12px 18px;font-size:18px;font-weight:700;line-height:1.55}
+.tipbox b{color:var(--c)}
+
+/* --- 2. 処理フロー（フローチャート） --- */
+.fc text{font-family:var(--font-body);font-weight:900;fill:#eef3ff;font-size:17px;text-anchor:middle;dominant-baseline:middle}
+.fc .s{fill:#0c1220;stroke:var(--c);stroke-width:2.5}
+.fc .d{fill:#1b1a0c;stroke:#f4d03f;stroke-width:2.5}
+.fc .e{fill:#24121a;stroke:var(--ng);stroke-width:2.5}
+.fc .ln{stroke:#7d8aa3;stroke-width:2.5;fill:none}
+.fc .yes{fill:var(--ok);font-size:15px}
+.fc .no{fill:var(--ng);font-size:15px}
+.legend2{position:absolute;left:760px;top:40px;width:364px;border-radius:12px;background:#0c1220;border:1.5px solid #2a3858;padding:14px 18px}
+.legend2 h4{font-size:17px;font-weight:900;margin-bottom:8px;color:var(--muted)}
+.legend2 div{display:flex;align-items:center;gap:12px;font-size:16.5px;font-weight:700;margin:8px 0}
+.shape{flex:none;width:46px;height:26px;border:2.5px solid var(--c);background:#0c1220}
+.shape.ov{border-radius:13px}
+.shape.dm{width:30px;height:30px;transform:rotate(45deg) scale(.8);border-color:#f4d03f;margin:0 8px}
+.shape.er{border-color:var(--ng)}
+
+/* --- 3. 関数設計 --- */
+.fn{border-radius:12px;background:#0c1220;border:1.5px solid #2a3858;margin-bottom:12px;overflow:hidden}
+.fn-h{font-family:var(--font-code);font-size:19px;font-weight:700;padding:9px 16px;background:color-mix(in srgb,var(--c) 12%,#0c1220);border-bottom:1px solid #2a3858}
+.fn-h .k{color:var(--c)}
+.fn-h .r{color:#ffd36b}
+.fn-h span.j{font-family:var(--font-body);font-size:16px;color:var(--muted);margin-left:14px}
+.fn-b{display:grid;grid-template-columns:90px 1fr 90px 1fr;gap:6px 12px;padding:9px 16px;font-size:16px;font-weight:700}
+.fn-b dt{color:var(--muted);font-weight:900}
+.fn-b dd{color:#d7def0}
+
+/* --- 6. 入力チェック --- */
+.badge{display:inline-block;font-family:var(--font-code);font-size:15px;padding:2px 9px;border-radius:6px;background:#0b1a14;color:var(--ok);border:1px solid rgba(46,230,168,.4)}
+.badge.n{background:#200f12;color:var(--ng);border-color:rgba(255,107,107,.45)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#04140f}
+body.editing [data-edit]{outline:1.5px dashed rgba(46,230,168,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>DETAILED DESIGN <span>／ 基本設計の次の工程（内部設計とも呼ぶ）</span></div>
+      <h1 class="title" data-edit><em>詳細設計</em>ってなに？ 何を設計するの？</h1>
+    </div>
+    <button class="btn" id="btnPlay">⏸ 一時停止</button>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">詳細設計 ＝</span></div>
+    <div class="hero-msg" data-edit>基本設計で決めた「見える形」を、プログラマが<br><mark>迷わず作れるところまで「中の作り」</mark>を細かく決めること</div>
+    <div class="hero-flow">
+      <div class="doc"><span class="ic">📐</span>基本設計書<small>どう見える？</small></div>
+      <span class="harr">▶</span>
+      <div class="doc now"><span class="ic">🔧</span>詳細設計書<small>どう作る？</small></div>
+      <span class="harr">▶</span>
+      <div class="doc"><span class="ic">💻</span>プログラム<small>実装する</small></div>
+    </div>
+  </div>
+
+  <!-- === ITEM LIST === -->
+  <div class="list-h reveal d3" data-edit>詳細設計で決める6つのこと（クリックで切り替え）</div>
+  <div class="list reveal d3" id="list"></div>
+
+  <!-- === EXAMPLE PANEL === -->
+  <div class="ex reveal d4" id="ex">
+    <div class="ex-top"><span class="lb">具体例</span><b id="exTitle"></b><span id="exSub"></span></div>
+
+    <!-- 1. モジュール設計 -->
+    <div class="pane" data-i="0">
+      <svg class="full" viewBox="0 0 1124 520"><g stroke="#4fe3f0" stroke-width="2.5" fill="none">
+        <path d="M562 78 V118"/><path d="M562 198 V236 H125 V266"/><path d="M562 236 H416 V266"/><path d="M562 236 H708 V266"/><path d="M562 236 H999 V266"/>
+      </g></svg>
+      <div class="mod top" style="left:362px;top:0;width:400px"><b>受付係</b><code>OrderController</code><small>画面から「注文する」を受け取る</small></div>
+      <div class="mod top" style="left:362px;top:120px;width:400px"><b>進行役</b><code>OrderService</code><small>下の係に順番に仕事をお願いする</small></div>
+      <div class="mod" style="left:0;top:266px;width:250px"><b>在庫チェック係</b><code>StockChecker</code><small>在庫が足りるか調べる</small></div>
+      <div class="mod" style="left:291px;top:266px;width:250px"><b>決済係</b><code>PaymentClient</code><small>カード決済会社に頼む</small></div>
+      <div class="mod" style="left:583px;top:266px;width:250px"><b>保存係</b><code>OrderRepository</code><small>注文をデータベースに保存</small></div>
+      <div class="mod" style="left:874px;top:266px;width:250px"><b>メール係</b><code>MailSender</code><small>確認メールを送る</small></div>
+      <div class="tipbox" style="top:410px" data-edit>プログラムを<b>役割ごとの部品（モジュール）</b>に分けて、それぞれの仕事を決めます。<br><b>1つの部品に1つの役割</b>にすると、直しやすく・テストしやすくなります。</div>
+    </div>
+
+    <!-- 2. 処理フロー設計 -->
+    <div class="pane" data-i="1">
+      <svg class="full fc" viewBox="0 0 1124 520">
+        <g class="ln">
+          <path d="M260 40 V64"/><path d="M260 132 V160"/><path d="M260 228 V262"/><path d="M260 306 V336"/><path d="M260 380 V410"/>
+          <path d="M350 98 H470"/><path d="M350 194 H470"/>
+        </g>
+        <g fill="#7d8aa3"><path d="M254 58 L260 66 L266 58z"/><path d="M254 154 L260 162 L266 154z"/><path d="M254 256 L260 264 L266 256z"/><path d="M254 330 L260 338 L266 330z"/><path d="M254 404 L260 412 L266 404z"/><path d="M464 92 L472 98 L464 104z"/><path d="M464 188 L472 194 L464 200z"/></g>
+        <rect class="s" x="170" y="0" width="180" height="40" rx="20"/><text x="260" y="20">開始（注文する）</text>
+        <polygon class="d" points="260,66 350,98 260,130 170,98"/><text x="260" y="98">在庫ある？</text>
+        <polygon class="d" points="260,162 350,194 260,226 170,194"/><text x="260" y="194">決済OK？</text>
+        <rect class="s" x="150" y="264" width="220" height="42" rx="6"/><text x="260" y="285">注文をDBに保存</text>
+        <rect class="s" x="150" y="338" width="220" height="42" rx="6"/><text x="260" y="359">確認メールを送る</text>
+        <rect class="s" x="150" y="412" width="220" height="40" rx="20"/><text x="260" y="432">終了（完了画面）</text>
+        <rect class="e" x="472" y="76" width="260" height="44" rx="6"/><text x="602" y="98">「在庫が足りません」表示</text>
+        <rect class="e" x="472" y="172" width="260" height="44" rx="6"/><text x="602" y="194">「決済できません」表示</text>
+        <text class="yes" x="290" y="146">はい</text><text class="yes" x="290" y="245">はい</text>
+        <text class="no" x="400" y="84">いいえ</text><text class="no" x="400" y="180">いいえ</text>
+        <text x="602" y="236" style="font-size:14px;fill:#8c99b5">→ カード入力画面に戻る</text>
+      </svg>
+      <div class="legend2">
+        <h4>フローチャートの記号</h4>
+        <div><span class="shape ov"></span>開始・終了</div>
+        <div><span class="shape dm"></span>分かれ道（はい / いいえ）</div>
+        <div><span class="shape"></span>処理（やること）</div>
+        <div><span class="shape er"></span>エラーのときの処理</div>
+      </div>
+      <div class="tipbox" style="left:760px;top:262px;width:364px;font-size:17px" data-edit>「注文確定」の<b>手順と分かれ道</b>を、<br>図で1ステップずつ決めます。<br><b>うまくいかない場合</b>の流れも<br>忘れずに書くのがポイント。</div>
+    </div>
+
+    <!-- 3. 関数設計 -->
+    <div class="pane" data-i="2">
+      <div class="lead" data-edit>部品の中の<b>関数（決まった仕事をする命令のまとまり）</b>ごとに、受け取るもの・返すものを決めます</div>
+      <div style="position:absolute;left:0;right:0;top:40px">
+        <div class="fn"><div class="fn-h"><span class="k">checkStock</span>(cartItems) → <span class="r">true / false</span><span class="j">在庫チェック係</span></div>
+          <dl class="fn-b"><dt>受け取る</dt><dd>カートの商品と個数の一覧</dd><dt>返す</dt><dd>全部そろう → true／足りない → false</dd></dl></div>
+        <div class="fn"><div class="fn-h"><span class="k">charge</span>(card, amount) → <span class="r">決済結果</span><span class="j">決済係</span></div>
+          <dl class="fn-b"><dt>受け取る</dt><dd>カード情報、金額（円）</dd><dt>返す</dt><dd>OK / NG と、決済番号</dd></dl></div>
+        <div class="fn"><div class="fn-h"><span class="k">saveOrder</span>(memberId, cartItems) → <span class="r">orderId</span><span class="j">保存係</span></div>
+          <dl class="fn-b"><dt>受け取る</dt><dd>会員ID、カートの中身</dd><dt>返す</dt><dd>新しく作った注文ID（数字）</dd></dl></div>
+        <div class="fn"><div class="fn-h"><span class="k">sendConfirmMail</span>(orderId) → <span class="r">なし</span><span class="j">メール係</span></div>
+          <dl class="fn-b"><dt>受け取る</dt><dd>注文ID</dd><dt>返す</dt><dd>なし（失敗したら記録して後で再送）</dd></dl></div>
+      </div>
+    </div>
+
+    <!-- 4. テーブル定義 -->
+    <div class="pane" data-i="3">
+      <div class="lead" data-edit>基本設計で決めた「注文」の表を、<b>データの型・長さ・必須かどうか</b>まで決めます</div>
+      <table class="tbl" style="position:absolute;left:0;right:0;top:40px">
+        <tr><th>列名（プログラム用）</th><th>日本語名</th><th>型</th><th>長さ</th><th>必須</th><th>説明・ルール</th></tr>
+        <tr><td class="mono c">order_id</td><td>注文ID</td><td class="mono">INT</td><td>-</td><td>○</td><td>🔑 主キー。自動で1ずつ増える</td></tr>
+        <tr><td class="mono c">member_id</td><td>会員ID</td><td class="mono">INT</td><td>-</td><td>○</td><td>会員の表とつながる番号</td></tr>
+        <tr><td class="mono c">ordered_at</td><td>注文日時</td><td class="mono">DATETIME</td><td>-</td><td>○</td><td>保存した時刻を自動で入れる</td></tr>
+        <tr><td class="mono c">total_price</td><td>合計金額</td><td class="mono">INT</td><td>-</td><td>○</td><td>円。0以上</td></tr>
+        <tr><td class="mono c">status</td><td>状態</td><td class="mono">VARCHAR</td><td>20</td><td>○</td><td>「受付」「発送済」「キャンセル」のどれか</td></tr>
+        <tr><td class="mono c">ship_address</td><td>届け先住所</td><td class="mono">VARCHAR</td><td>200</td><td>○</td><td>200文字まで</td></tr>
+      </table>
+      <div class="tipbox" style="top:410px" data-edit><b>INT</b>＝整数、<b>VARCHAR</b>＝文字（長さの上限つき）、<b>DATETIME</b>＝日付と時刻。<br>ここまで決めておくと、プログラマもデータベース担当も同じ前提で作れます。</div>
+    </div>
+
+    <!-- 5. エラー処理設計 -->
+    <div class="pane" data-i="4">
+      <div class="lead" data-edit><b>うまくいかなかったとき</b>に、システムがどう動くかを1つずつ決めます</div>
+      <table class="tbl" style="position:absolute;left:0;right:0;top:40px">
+        <tr><th>どんなとき？</th><th>システムの動き</th><th>画面に出すメッセージ</th><th>記録（ログ）</th></tr>
+        <tr><td class="ng">在庫が足りない</td><td>注文を止める</td><td>「在庫が足りません。個数を変えてください」</td><td>残さない</td></tr>
+        <tr><td class="ng">カード決済がNG</td><td>注文を止め、カード入力へ戻す</td><td>「このカードは使えません」</td><td>決済会社の理由を記録</td></tr>
+        <tr><td class="ng">データベースにつながらない</td><td>3回までやり直し → だめならエラー画面</td><td>「ただいま混み合っています」</td><td>重大エラーとして記録し、担当者に通知</td></tr>
+        <tr><td class="ng">確認メールが送れない</td><td>注文は成立させ、10分後に再送</td><td>（お客さまには出さない）</td><td>再送の回数を記録</td></tr>
+      </table>
+      <div class="tipbox" style="top:410px" data-edit>お客さまに見せる<b>やさしいメッセージ</b>と、開発者が原因を調べるための<b>くわしい記録（ログ）</b>を分けて考えます。</div>
+    </div>
+
+    <!-- 6. 入力チェック設計 -->
+    <div class="pane" data-i="5">
+      <div class="lead" data-edit>注文画面の入力欄ごとに、<b>受け付けるルール</b>と<b>間違えたときのメッセージ</b>を決めます</div>
+      <table class="tbl" style="position:absolute;left:0;right:0;top:40px">
+        <tr><th>入力欄</th><th>ルール</th><th>OKの例</th><th>NGの例</th><th>NGのときのメッセージ</th></tr>
+        <tr><td>郵便番号</td><td>数字7桁（ハイフンは自動で消す）</td><td><span class="badge">150-0001</span></td><td><span class="badge n">15000</span></td><td>「7桁で入力してください」</td></tr>
+        <tr><td>個数</td><td>1〜99 の整数</td><td><span class="badge">2</span></td><td><span class="badge n">0</span></td><td>「1〜99で入力してください」</td></tr>
+        <tr><td>カード番号</td><td>数字14〜16桁</td><td><span class="badge">4111…1111</span></td><td><span class="badge n">abcd</span></td><td>「数字で入力してください」</td></tr>
+        <tr><td>メールアドレス</td><td>@ を含む・254文字まで</td><td><span class="badge">a@example.com</span></td><td><span class="badge n">a.example.com</span></td><td>「形式が正しくありません」</td></tr>
+        <tr><td>届け先住所</td><td>必須・200文字まで</td><td><span class="badge">東京都…</span></td><td><span class="badge n">（空）</span></td><td>「住所を入力してください」</td></tr>
+      </table>
+      <div class="tipbox" style="top:410px" data-edit>チェックの場所も決めます：<b>画面側</b>ですぐ知らせる ＋ <b>サーバ側</b>でも必ず確認する（すり抜け防止）。</div>
+    </div>
+
+    <div class="link"><i>基本設計とのつながり</i><span id="exLink"></span></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   ITEMS — 詳細設計で決める項目（文言はここで編集）
+   =========================================== */
+const ITEMS = [
+  { name:'モジュール設計', ic:'🧩', c:'#4fe3f0', desc:'プログラムをどんな部品に分けるか',
+    title:'「注文確定」を部品に分ける', sub:'部品の名前と、それぞれの役割',
+    link:'基本設計の機能「<b>F-03 注文確定</b>」を、プログラムの部品レベルに分解' },
+  { name:'処理フロー設計', ic:'🔁', c:'#2ee6a8', desc:'処理の手順と分かれ道（フローチャート）',
+    title:'「注文確定」の処理の流れ', sub:'手順・分かれ道・エラーの流れ',
+    link:'基本設計の「入力 → <b>処理</b> → 出力」の処理部分を、1ステップずつに' },
+  { name:'関数設計', ic:'ƒ', c:'#f4d03f', desc:'各部品の関数の名前・受け取る値・返す値',
+    title:'部品の中の関数の決めごと', sub:'名前・受け取るもの・返すもの',
+    link:'モジュール設計で決めた<b>係（部品）</b>ごとに、中の関数を決める' },
+  { name:'テーブル定義', ic:'🗄️', c:'#5aa2ff', desc:'データベースの表を、型・長さまで決める',
+    title:'「注文」テーブルの定義', sub:'列ごとの型・長さ・必須・ルール',
+    link:'基本設計の<b>データ設計</b>（注文の表と項目）を、データベースで作れる形に' },
+  { name:'エラー処理設計', ic:'🚨', c:'#ff6b6b', desc:'失敗したとき、どう動くか・何を出すか',
+    title:'うまくいかないときの動き', sub:'状況ごとの動き・メッセージ・記録',
+    link:'基本設計のシステム構成（「<b>24時間止めない</b>」）を、失敗時のやり直しなどの動きで支える' },
+  { name:'入力チェック設計', ic:'✅', c:'#ff9f5a', desc:'入力欄ごとの受け付けるルール',
+    title:'注文画面の入力チェック', sub:'ルール・OK例・NG例・メッセージ',
+    link:'基本設計の<b>画面設計</b>（項目のルール）を、プログラムで判定できる形に' }
+];
+ITEMS.forEach((it, i) => {
+  const d = document.createElement('div');
+  d.className = 'it'; d.style.setProperty('--c', it.c);
+  d.innerHTML = `<span class="ic">${it.ic}</span><b>${it.name}</b><p>${it.desc}</p><span class="bar"></span>`;
+  d.onclick = () => { show(i); restart(); };
+  $('list').appendChild(d);
+});
+
+/* ===========================================
+   SHOW / PLAYER — 自動で順番に切り替え（クリックでも可）
+   =========================================== */
+const DUR = 8000;
+document.documentElement.style.setProperty('--dur', DUR + 'ms');
+let cur = 0, timer = null, playing = true;
+function show(i){
+  cur = (i + ITEMS.length) % ITEMS.length; const it = ITEMS[cur];
+  [...$('list').children].forEach((el, j) => {
+    el.classList.remove('act'); void el.offsetWidth;
+    if (j === cur) el.classList.add('act');
+  });
+  $('ex').style.setProperty('--c', it.c);
+  $('exTitle').textContent = `${it.name}：${it.title}`;
+  $('exSub').textContent = it.sub;
+  $('exLink').innerHTML = it.link;
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', +p.dataset.i === cur));
+}
+function restart(){ clearInterval(timer); if (playing) timer = setInterval(() => show(cur + 1), DUR); }
+function setPlaying(v){
+  playing = v; $('slide').classList.toggle('paused', !v);
+  $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v) show(cur);
+  restart();
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight'){ show(cur + 1); restart(); }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowLeft'){ show(cur - 1); restart(); }
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .tbl td').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'detail-design.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+show(0); restart();
+</script>
+</body>
+</html>
