@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>サボり神社｜今日の運勢</title>
+<style>
+  :root {
+    --ink: #292522;
+    --paper: #fffaf0;
+    --paper-deep: #f2e8d6;
+    --orange: #e9a23b;
+    --red: #df493f;
+    --muted: #85817b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 28px 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 15% 15%, rgba(255,255,255,.85), transparent 35%),
+      radial-gradient(ellipse at 85% 85%, rgba(231,188,119,.22), transparent 40%),
+      #f4ead9;
+    font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+  }
+  button { font: inherit; }
+  .app {
+    width: min(100%, 490px);
+    padding: 30px 26px 24px;
+    border: 2px solid rgba(70,52,34,.12);
+    border-radius: 28px;
+    background: var(--paper);
+    box-shadow: 0 18px 55px rgba(76,53,29,.14), 0 3px 0 rgba(76,53,29,.08);
+    text-align: center;
+    overflow: hidden;
+    position: relative;
+  }
+  .app::before, .app::after {
+    content: "✦";
+    position: absolute;
+    color: #e7bd78;
+    font-size: 22px;
+    opacity: .7;
+  }
+  .app::before { top: 22px; left: 23px; }
+  .app::after { top: 42px; right: 25px; font-size: 15px; }
+  .eyebrow {
+    margin: 0 0 5px;
+    color: #a4773c;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .24em;
+  }
+  h1 {
+    margin: 0;
+    font-size: clamp(31px, 8vw, 39px);
+    letter-spacing: .08em;
+    font-weight: 900;
+  }
+  .tagline {
+    margin: 8px 0 18px;
+    color: #82766a;
+    font-size: 13px;
+    letter-spacing: .08em;
+  }
+  .scene {
+    height: 190px;
+    margin: 0 auto 8px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: end;
+  }
+  .sun {
+    position: absolute;
+    width: 112px; height: 112px;
+    border-radius: 50%;
+    background: #f8dfaa;
+    top: 9px; right: 50px;
+    opacity: .55;
+  }
+  .cloud {
+    position: absolute;
+    top: 29px; left: 45px;
+    color: #d8c8ae;
+    font-size: 25px;
+  }
+  .stickman {
+    width: 145px;
+    height: 166px;
+    position: relative;
+    z-index: 1;
+    transform: rotate(-5deg);
+  }
+  .stickman .head {
+    position: absolute;
+    width: 48px; height: 48px;
+    border: 5px solid #292522;
+    border-radius: 50%;
+    top: 15px; left: 51px;
+    background: #fffaf0;
+  }
+  .stickman .eye {
+    position: absolute; top: 18px;
+    width: 4px; height: 4px; border-radius: 50%;
+    background: #292522;
+  }
+  .stickman .eye.left { left: 10px; }
+  .stickman .eye.right { right: 10px; }
+  .stickman .mouth {
+    position: absolute; left: 17px; top: 29px;
+    width: 10px; height: 5px;
+    border-bottom: 2px solid #292522;
+    border-radius: 50%;
+  }
+  .stickman .body {
+    position: absolute; width: 5px; height: 57px;
+    background: #292522; top: 61px; left: 73px;
+    border-radius: 4px;
+  }
+  .stickman .arm {
+    position: absolute; height: 5px; background: #292522;
+    border-radius: 4px; transform-origin: left center;
+  }
+  .stickman .arm.left { width: 43px; top: 78px; left: 73px; transform: rotate(155deg); }
+  .stickman .arm.right { width: 38px; top: 78px; left: 75px; transform: rotate(28deg); }
+  .stickman .leg {
+    position: absolute; height: 5px; background: #292522;
+    border-radius: 4px; transform-origin: left center;
+  }
+  .stickman .leg.left { width: 48px; top: 115px; left: 74px; transform: rotate(145deg); }
+  .stickman .leg.right { width: 42px; top: 115px; left: 74px; transform: rotate(22deg); }
+  .stickman .pillow {
+    position: absolute; width: 85px; height: 23px;
+    background: #e9bd7b; border: 3px solid #292522;
+    border-radius: 12px 12px 8px 8px;
+    bottom: 0; left: 28px; transform: rotate(-3deg);
+  }
+  .zzz {
+    position: absolute; top: 4px; right: 12px;
+    color: #d18d35; font-weight: 900; font-size: 20px;
+    transform: rotate(12deg);
+  }
+  .scene-caption {
+    margin: -1px 0 16px;
+    font-size: 11px;
+    color: #9b8d7b;
+  }
+  .fortune-stage {
+    min-height: 154px;
+    padding: 18px 16px 15px;
+    border: 1px dashed #dfc9a6;
+    border-radius: 19px;
+    background: #fff6e6;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+  .stage-label {
+    color: #a18a6c;
+    font-size: 11px;
+    letter-spacing: .2em;
+    font-weight: 800;
+  }
+  .fortune {
+    min-height: 53px;
+    display: grid;
+    place-items: center;
+    font-size: clamp(35px, 10vw, 48px);
+    font-weight: 900;
+    letter-spacing: .12em;
+    line-height: 1.2;
+  }
+  .fortune.empty { color: #c8b99f; letter-spacing: .18em; }
+  .hint { margin: 0; color: #988a78; font-size: 11px; }
+  .draw-button {
+    width: 100%;
+    margin-top: 17px;
+    padding: 16px 18px;
+    border: 0;
+    border-radius: 15px;
+    color: white;
+    background: linear-gradient(180deg, #f0b34e, #df8e2d);
+    box-shadow: 0 5px 0 #b87325, 0 9px 18px rgba(191,120,37,.18);
+    font-size: 17px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s, filter .12s;
+  }
+  .draw-button:hover { filter: brightness(1.04); transform: translateY(-1px); }
+  .draw-button:active { transform: translateY(4px); box-shadow: 0 1px 0 #b87325; }
+  .draw-button:disabled { cursor: wait; filter: grayscale(.25); opacity: .8; }
+  .box-area {
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    position: relative;
+    transition: height .25s, opacity .25s;
+  }
+  .box-area.active { height: 104px; opacity: 1; margin-top: 5px; }
+  .omikuji-box {
+    width: 82px; height: 72px;
+    margin: 12px auto 0;
+    position: relative;
+    border: 4px solid #59402b;
+    border-radius: 9px 9px 13px 13px;
+    background: repeating-linear-gradient(90deg, #c78b4b 0 12px, #d69a58 12px 19px);
+    box-shadow: inset 0 -7px rgba(90,54,25,.12), 0 5px 0 rgba(70,44,25,.12);
+  }
+  .omikuji-box::before {
+    content: "";
+    position: absolute;
+    width: 90px; height: 13px;
+    left: -8px; top: -9px;
+    border: 4px solid #59402b;
+    border-radius: 5px;
+    background: #e1b477;
+  }
+  .omikuji-box::after {
+    content: "おみくじ";
+    position: absolute; inset: 17px 0 auto;
+    color: #fff4df; font-size: 12px; font-weight: 900;
+    text-shadow: 1px 1px #754d2b;
+  }
+  .omikuji-box.shake { animation: shake .13s infinite; }
+  .paper-slip {
+    position: absolute;
+    width: 20px; height: 39px;
+    left: calc(50% - 10px); top: -4px;
+    background: #fffdf5;
+    border: 2px solid #c8b99f;
+    opacity: 0;
+    z-index: 2;
+  }
+  .paper-slip.pop { animation: paper-pop .7s ease-out forwards; }
+  @keyframes shake {
+    0%,100% { transform: rotate(0) translateX(0); }
+    25% { transform: rotate(-9deg) translateX(-3px); }
+    75% { transform: rotate(9deg) translateX(3px); }
+  }
+  @keyframes paper-pop {
+    0% { opacity: 0; transform: translateY(20px) scale(.7); }
+    55% { opacity: 1; transform: translateY(-52px) scale(1.08); }
+    100% { opacity: 1; transform: translateY(-43px) scale(1); }
+  }
+  .result-pop { animation: result-pop .45s cubic-bezier(.2,1.5,.5,1) both; }
+  @keyframes result-pop {
+    from { opacity: 0; transform: scale(.55) rotate(-7deg); }
+    to { opacity: 1; transform: scale(1) rotate(0); }
+  }
+  .footer {
+    margin: 20px 0 0;
+    color: #b0a18d;
+    font-size: 10px;
+    letter-spacing: .08em;
+  }
+  @media (max-width: 390px) {
+    .app { padding: 27px 18px 21px; }
+    .scene { height: 174px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <p class="eyebrow">本日の運勢を占います</p>
+    <h1>サボり神社</h1>
+    <p class="tagline">〜 サボるな、運命を引け。〜</p>
+  </header>
+
+  <section class="scene" aria-label="サボっている棒人間">
+    <div class="sun"></div>
+    <div class="cloud">☁</div>
+    <div class="stickman" aria-hidden="true">
+      <div class="head"><i class="eye left"></i><i class="eye right"></i><i class="mouth"></i></div>
+      <div class="body"></div>
+      <div class="arm left"></div><div class="arm right"></div>
+      <div class="leg left"></div><div class="leg right"></div>
+      <div class="pillow"></div>
+      <div class="zzz">Zzz...</div>
+    </div>
+  </section>
+  <p class="scene-caption">今日もやる気はお休み中。</p>
+
+  <section class="fortune-stage" aria-live="polite" aria-atomic="true">
+    <div class="stage-label">今日の運勢</div>
+    <div id="fortune" class="fortune empty">？？？</div>
+    <p id="hint" class="hint">運命は箱の中。覚悟はいい？</p>
+  </section>
+
+  <div id="boxArea" class="box-area" aria-hidden="true">
+    <div id="slip" class="paper-slip"></div>
+    <div id="omikujiBox" class="omikuji-box"></div>
+  </div>
+
+  <button id="drawButton" class="draw-button" type="button">おみくじを引く！</button>
+  <p class="footer">※ 引き直しは何度でも可能です</p>
+</main>
+
+<script>
+(() => {
+  const fortune = document.getElementById('fortune');
+  const hint = document.getElementById('hint');
+  const button = document.getElementById('drawButton');
+  const boxArea = document.getElementById('boxArea');
+  const box = document.getElementById('omikujiBox');
+  const slip = document.getElementById('slip');
+
+  const fortunes = [
+    { name: 'サボり', weight: 50, color: '#808080', message: '今日はゆっくり……しすぎ注意？' },
+    { name: '未達',   weight: 40, color: '#df493f', message: 'あと一歩！明日の自分に期待。' },
+    { name: '達成',   weight: 10, color: '#d4a017', message: 'やった！その勢いでいこう！' }
+  ];
+
+  function drawFortune() {
+    const value = Math.random() * 100;
+    let total = 0;
+    for (const item of fortunes) {
+      total += item.weight;
+      if (value < total) return item;
+    }
+    return fortunes[fortunes.length - 1];
+  }
+
+  function showResult(result) {
+    fortune.textContent = result.name;
+    fortune.style.color = result.color;
+    fortune.classList.remove('empty', 'result-pop');
+    void fortune.offsetWidth;
+    fortune.classList.add('result-pop');
+    hint.textContent = result.message;
+    button.textContent = 'もう一度引く！';
+    button.disabled = false;
+  }
+
+  button.addEventListener('click', () => {
+    if (button.disabled) return;
+
+    button.disabled = true;
+    button.textContent = 'おみくじを振っています…';
+    fortune.textContent = '…';
+    fortune.style.color = '#a18a6c';
+    fortune.classList.remove('empty', 'result-pop');
+    hint.textContent = 'シャカシャカ……運命を選定中。';
+
+    boxArea.classList.add('active');
+    box.classList.remove('shake');
+    slip.classList.remove('pop');
+    void box.offsetWidth;
+    box.classList.add('shake');
+
+    // 結果は抽選開始時に決定し、演出終了後に表示する
+    const result = drawFortune();
+
+    window.setTimeout(() => {
+      box.classList.remove('shake');
+      slip.classList.add('pop');
+    }, 1150);
+
+    window.setTimeout(() => {
+      boxArea.classList.remove('active');
+      showResult(result);
+    }, 1900);
+  });
+})();
+</script>
+</body>
+</html>
