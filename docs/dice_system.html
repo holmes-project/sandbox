@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>サイコロ</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: Canvas; color: CanvasText;
+  }
+  main { text-align: center; padding: 2rem 1.25rem; width: min(100%, 420px); }
+  h1 { margin: 0 0 2rem; font-size: 1.8rem; }
+  .dice {
+    width: 160px; height: 160px; margin: 0 auto 1.25rem; padding: 18px;
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr); gap: 8px;
+    background: #fff; border: 2px solid #d1d5db; border-radius: 24px;
+    box-shadow: 0 12px 28px #0002; color: #202020;
+    transform: rotate(0deg);
+  }
+  .dot { width: 24px; height: 24px; border-radius: 50%; background: #202020; align-self: center; justify-self: center; visibility: hidden; }
+  .dot.visible { visibility: visible; }
+  .dice.rolling { animation: tumble .85s ease-in-out; }
+  @keyframes tumble {
+    0% { transform: rotate(0) scale(1); }
+    25% { transform: rotate(100deg) scale(.88); }
+    55% { transform: rotate(260deg) scale(1.08); }
+    100% { transform: rotate(540deg) scale(1); }
+  }
+  #result { min-height: 2rem; margin: 0 0 1.25rem; font-size: 1.2rem; font-weight: 700; }
+  button {
+    border: 0; border-radius: 12px; padding: .85rem 1.6rem; font-size: 1.05rem;
+    font-weight: 700; color: white; background: #2563eb; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #1d4ed8; }
+  button:disabled { opacity: .6; cursor: wait; }
+  @media (prefers-reduced-motion: reduce) {
+    .dice.rolling { animation-duration: .2s; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>サイコロ</h1>
+  <div id="dice" class="dice" role="img" aria-label="サイコロの出目: 未実行">
+    <span class="dot" data-position="1"></span>
+    <span class="dot" data-position="2"></span>
+    <span class="dot" data-position="3"></span>
+    <span class="dot" data-position="4"></span>
+    <span class="dot" data-position="5"></span>
+    <span class="dot" data-position="6"></span>
+    <span class="dot" data-position="7"></span>
+    <span class="dot" data-position="8"></span>
+    <span class="dot" data-position="9"></span>
+  </div>
+  <p id="result" aria-live="polite">出目：未実行</p>
+  <button id="rollButton" type="button">サイコロを振る</button>
+</main>
+<script>
+(() => {
+  const dice = document.getElementById("dice");
+  const result = document.getElementById("result");
+  const button = document.getElementById("rollButton");
+  const dots = Array.from(dice.querySelectorAll(".dot"));
+  const faces = {
+    1: [5],
+    2: [1, 9],
+    3: [1, 5, 9],
+    4: [1, 3, 7, 9],
+    5: [1, 3, 5, 7, 9],
+    6: [1, 3, 4, 6, 7, 9]
+  };
+  let rolling = false;
+
+  function showFace(value) {
+    dots.forEach(dot => {
+      dot.classList.toggle("visible", faces[value].includes(Number(dot.dataset.position)));
+    });
+    dice.setAttribute("aria-label", `サイコロの出目: ${value}`);
+  }
+
+  button.addEventListener("click", () => {
+    if (rolling) return;
+    rolling = true;
+    button.disabled = true;
+    result.textContent = "出目：振っています…";
+    dice.classList.remove("rolling");
+    void dice.offsetWidth;
+    dice.classList.add("rolling");
+
+    const animationDuration = 850;
+    const interval = setInterval(() => {
+      showFace(Math.floor(Math.random() * 6) + 1);
+    }, 90);
+
+    setTimeout(() => {
+      clearInterval(interval);
+      const finalValue = Math.floor(Math.random() * 6) + 1;
+      showFace(finalValue);
+      result.textContent = `出目：${finalValue}`;
+      dice.classList.remove("rolling");
+      button.disabled = false;
+      rolling = false;
+    }, animationDuration);
+  });
+})();
+</script>
+</body>
+</html>
