@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V字モデルで見る ソフトウェア開発の流れ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --design:#5aa2ff;   /* つくる（設計） */
+  --impl:#f4d03f;     /* 実装 */
+  --test:#2ee6a8;     /* たしかめる（テスト） */
+  --accent:#ffb547;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 460px at 300px 420px, rgba(90,162,255,.09), transparent 70%),
+    radial-gradient(520px 460px at 920px 420px, rgba(46,230,168,.08), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:44px;right:90px;height:130px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:10px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:68px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer;transition:border-color .2s,background .2s}
+.btn:hover{border-color:var(--accent);background:#18233a}
+
+/* ===========================================
+   V DIAGRAM — V字の全体図（左：つくる / 右：たしかめる）
+   =========================================== */
+.vbox{position:absolute;left:90px;top:200px;width:1040px;height:590px}
+.vbox svg{position:absolute;inset:0;width:1040px;height:590px;max-width:none;max-height:none;overflow:visible}
+.vpath{fill:none;stroke:url(#vg);stroke-width:16;stroke-linecap:round;stroke-linejoin:round;opacity:.35}
+.vpath-run{fill:none;stroke:url(#vg);stroke-width:4;stroke-dasharray:10 14;animation:march 1.2s linear infinite;opacity:.9}
+@keyframes march{to{stroke-dashoffset:-24}}
+.pair{stroke:#3a4766;stroke-width:2.5;stroke-dasharray:8 8;transition:stroke .35s}
+.pair.act{stroke:var(--test);animation:march 1s linear infinite}
+
+/* 腕の大きなラベル */
+.arm{position:absolute;font-weight:900;font-size:22px;letter-spacing:.08em;white-space:nowrap;opacity:.9}
+.arm.l{left:120px;top:395px;color:var(--design);transform:rotate(47deg);transform-origin:left center}
+.arm.r{left:745px;top:560px;color:var(--test);transform:rotate(-47deg);transform-origin:left center}
+.axis{position:absolute;font-size:16px;font-weight:700;color:var(--muted);white-space:nowrap}
+
+/* 工程ノード */
+.ph{position:absolute;width:200px;height:104px;border-radius:14px;background:var(--panel);border:2px solid color-mix(in srgb,var(--c) 45%,#1f2a40);padding:10px 12px;text-align:center;cursor:pointer;transition:transform .35s var(--ease),box-shadow .35s,border-color .35s,background .35s;z-index:2}
+.ph:hover{border-color:var(--c)}
+.ph .no{position:absolute;left:-12px;top:-12px;width:32px;height:32px;border-radius:50%;background:#0a0e16;border:2px solid var(--c);color:var(--c);font-family:var(--font-code);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center}
+.ph b{display:block;font-weight:900;font-size:24px;white-space:nowrap;color:var(--c);line-height:1.2}
+.ph p{font-size:15px;font-weight:700;line-height:1.4;color:#c9d4ee;margin-top:5px}
+.ph.act{transform:scale(1.08);border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,#111827);box-shadow:0 0 0 6px color-mix(in srgb,var(--c) 18%,transparent),0 0 40px color-mix(in srgb,var(--c) 30%,transparent)}
+.ph.dim{filter:saturate(.45) brightness(.72)}
+.ph.pairhl{border-color:var(--c);box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
+.d{--c:var(--design)} .i{--c:var(--impl)} .t{--c:var(--test)}
+
+/* 対応関係ラベル */
+.pill{position:absolute;transform:translate(-50%,-50%);font-size:14px;font-weight:900;padding:4px 10px;border-radius:999px;background:#0f1626;border:1.5px solid #3a4766;color:var(--muted);white-space:nowrap;transition:all .35s;z-index:3}
+.pill.act{background:var(--test);border-color:var(--test);color:#04140f;box-shadow:0 0 16px rgba(46,230,168,.5)}
+
+/* 現在地マーカー */
+.marker{position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:#fff;box-shadow:0 0 0 6px rgba(255,255,255,.18),0 0 30px #fff;z-index:4;transition:left 1s var(--ease),top 1s var(--ease),opacity .3s;pointer-events:none}
+
+/* ===========================================
+   COMPARE TABLE — 3つの設計の違い
+   =========================================== */
+.cmp{position:absolute;left:1170px;top:200px;width:660px;height:590px;border-radius:18px;background:var(--panel);border:1.5px solid var(--line);padding:18px 18px 16px}
+.cmp-h{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}
+.cmp-h b{font-weight:900;font-size:26px;color:var(--design)}
+.cmp-h span{font-size:16px;color:var(--muted);font-weight:700}
+table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}
+th,td{font-size:16.5px;line-height:1.45;padding:11px 10px;vertical-align:top;border-bottom:1px solid #1f2a40;transition:background .35s,color .35s}
+th{font-weight:900;text-align:left}
+thead th{font-size:19px;color:var(--design);border-bottom:2px solid #2a3858;padding:6px 10px 10px}
+thead th:first-child{color:var(--muted);font-size:15px}
+tbody th{color:var(--muted);font-size:15.5px;width:112px}
+tbody td{color:#d7def0;font-weight:700}
+tr:last-child th,tr:last-child td{border-bottom:none}
+td.key{font-size:21px;font-weight:900;color:#fff}
+td.ex{color:#ffd9a8}
+td.ts{color:var(--test)}
+.colhl{background:rgba(90,162,255,.13)}
+thead th.colhl{background:var(--design);color:#06101f;border-radius:10px 10px 0 0}
+.tag-s{display:inline-block;font-size:12px;font-weight:900;padding:1px 7px;border-radius:6px;background:#1d2840;color:#9ecbff;margin-top:3px}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:814px;height:100px;border-radius:18px;background:linear-gradient(90deg,#141a26,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:24px;padding:0 30px}
+.cap-no{flex:none;width:62px;height:62px;border-radius:50%;background:var(--cc,var(--design));color:#06101f;font-family:var(--font-display);font-size:30px;display:flex;align-items:center;justify-content:center;transition:background .3s}
+.cap-name{flex:none;font-weight:900;font-size:30px;color:var(--cc,var(--design));transition:color .3s}
+.cap-tx{font-size:25px;font-weight:700;line-height:1.4;transition:opacity .25s}
+.cap-tx b{color:var(--accent);font-weight:900}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   FOOTER
+   =========================================== */
+.legend{position:absolute;left:90px;top:948px;display:flex;gap:14px}
+.chip{display:flex;align-items:center;gap:10px;padding:10px 18px 10px 12px;border-radius:12px;background:#0f1626;border:1.5px solid var(--line);font-size:19px;font-weight:900}
+.chip i{width:16px;height:16px;border-radius:5px;background:var(--c)}
+.chip span{font-size:16px;color:var(--muted);font-weight:700}
+.steps{position:absolute;right:90px;top:946px;display:flex}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;width:112px;cursor:pointer;position:relative}
+.step::before{content:'';position:absolute;top:17px;left:-50%;width:100%;height:3px;background:#24304a}
+.step:first-child::before{display:none}
+.step.past::before,.step.now::before{background:var(--accent)}
+.step .n{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#141c2c;border:2px solid #33415f;font-family:var(--font-code);font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .3s}
+.step .l{font-size:14.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.step.past .n{background:#2a2111;border-color:var(--accent);color:var(--accent)}
+.step.now .n{background:var(--accent);border-color:var(--accent);color:#1a1205;box-shadow:0 0 0 6px rgba(255,181,71,.18)}
+.step.now .l{color:var(--text)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.18s}
+.slide.visible .d3{transition-delay:.3s}.slide.visible .d4{transition-delay:.42s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1205}
+body.editing [data-edit]{outline:1.5px dashed rgba(255,181,71,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>SOFTWARE DEVELOPMENT <span>／ V字モデル</span></div>
+      <h1 class="title" data-edit><em>V字モデル</em>で見る ソフトウェア開発の流れ</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === V DIAGRAM === -->
+  <div class="vbox reveal d2" id="vbox">
+    <svg viewBox="0 0 1040 590">
+      <defs>
+        <linearGradient id="vg" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#5aa2ff"/><stop offset=".5" stop-color="#f4d03f"/><stop offset="1" stop-color="#2ee6a8"/>
+        </linearGradient>
+      </defs>
+      <g id="pairs"></g>
+      <path class="vpath" id="vpath"/>
+      <path class="vpath-run" id="vpathRun"/>
+    </svg>
+    <div class="axis" style="left:415px;top:4px" data-edit>▲ ざっくり・お客さま目線</div>
+    <div class="axis" style="left:150px;top:560px" data-edit>▼ 細かく・プログラム目線</div>
+    <div class="arm l" data-edit>つくる（設計）▶</div>
+    <div class="arm r" data-edit>たしかめる（テスト）▶</div>
+    <div class="marker" id="marker"></div>
+  </div>
+
+  <!-- === COMPARE TABLE === -->
+  <div class="cmp reveal d3">
+    <div class="cmp-h"><b>3つの設計の違い</b><span data-edit>上から順に、だんだん細かく決めていく</span></div>
+    <table id="cmp">
+      <thead><tr><th>比べる点</th><th data-col="0">要件定義</th><th data-col="1">基本設計</th><th data-col="2">詳細設計</th></tr></thead>
+      <tbody>
+        <tr><th>ひとことで</th><td class="key" data-col="0">何を作る？</td><td class="key" data-col="1">どう見える？</td><td class="key" data-col="2">どう作る？</td></tr>
+        <tr><th>だれの目線</th><td data-col="0">お客さま（使う人）</td><td data-col="1">使う人と開発者の間</td><td data-col="2">開発者（プログラマ）</td></tr>
+        <tr><th>決めること</th><td data-col="0">やりたいこと・必要な機能・予算や期限</td><td data-col="1">画面・機能一覧・扱うデータの項目</td><td data-col="2">処理の手順・プログラムの部品・データベースの作り</td></tr>
+        <tr><th>主な成果物</th><td data-col="0">要件定義書</td><td data-col="1">基本設計書<br><span class="tag-s">外部設計とも</span></td><td data-col="2">詳細設計書<br><span class="tag-s">内部設計とも</span></td></tr>
+        <tr><th>例：ToDoアプリ</th><td class="ex" data-col="0">「スマホでやることを登録・完了したい」</td><td class="ex" data-col="1">「一覧画面に追加ボタン、完了でチェックが付く」</td><td class="ex" data-col="2">「追加→入力チェック→tasks表に保存」</td></tr>
+        <tr><th>確かめるテスト</th><td class="ts" data-col="0">総合・受入テスト</td><td class="ts" data-col="1">結合テスト</td><td class="ts" data-col="2">単体テスト</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4" id="caption">
+    <div class="cap-no" id="capNo">1</div>
+    <div class="cap-name" id="capName"></div>
+    <div class="cap-tx" id="capTx"></div>
+  </div>
+
+  <!-- === FOOTER === -->
+  <div class="legend reveal d4">
+    <div class="chip" style="--c:var(--design)"><i></i>設計<span>つくる内容を決める</span></div>
+    <div class="chip" style="--c:var(--impl)"><i></i>実装<span>プログラムを書く</span></div>
+    <div class="chip" style="--c:var(--test)"><i></i>テスト<span>対になる設計どおりか確かめる</span></div>
+  </div>
+  <div class="steps reveal d4" id="steps"></div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   PHASES — 工程の内容（文言はここで編集）
+   x, y は V字エリア内の中心座標 / pair は対になる工程 / col は比較表の列
+   =========================================== */
+const PH = [
+  { name:'要件定義', k:'d', x:120, y:80,  pair:6, col:0,
+    goal:'「何を作るか」を<br>お客さまと決める',
+    cap:'お客さまの困りごと・やりたいことを聞き、<b>何を作るか</b>を決めます。ここがズレると、後の工程がすべてやり直しになります。' },
+  { name:'基本設計', k:'d', x:255, y:235, pair:5, col:1,
+    goal:'画面や機能など<br>「見える形」を決める',
+    cap:'要件をもとに、画面・機能・データの項目など<b>使う人から見える部分</b>を決めます（外部設計とも呼びます）。' },
+  { name:'詳細設計', k:'d', x:390, y:390, pair:4, col:2,
+    goal:'プログラムの<br>「中の作り」を決める',
+    cap:'基本設計を、プログラマがそのまま作れるレベルまで分解し、<b>中の作り</b>を決めます（内部設計とも呼びます）。' },
+  { name:'実装', k:'i', x:520, y:510, pair:null, col:null,
+    goal:'設計書どおりに<br>プログラムを書く',
+    cap:'詳細設計書を見ながら<b>プログラムを書きます</b>（コーディング）。V字のいちばん下で、ここから折り返して確認に入ります。' },
+  { name:'単体テスト', k:'t', x:650, y:390, pair:2, col:2,
+    goal:'部品1つずつが<br>詳細設計どおりか',
+    cap:'関数などの部品を<b>1つずつ</b>動かし、<b>詳細設計</b>どおりに動くかを確かめます。' },
+  { name:'結合テスト', k:'t', x:785, y:235, pair:1, col:1,
+    goal:'部品をつなげて<br>基本設計どおりか',
+    cap:'部品を<b>つなげて</b>動かし、画面や機能が<b>基本設計</b>どおりに動くかを確かめます。' },
+  { name:'総合・受入テスト', k:'t', x:920, y:80, pair:0, col:0,
+    goal:'システム全体が<br>要件を満たすか',
+    cap:'システム<b>全体</b>が<b>要件</b>を満たすかを確認。最後にお客さま自身が使って確かめます（受入テスト）。' }
+];
+
+/* V字の線と対応線を描く */
+$('vpath').setAttribute('d', 'M' + PH.map(p => `${p.x} ${p.y}`).join(' L'));
+$('vpathRun').setAttribute('d', $('vpath').getAttribute('d'));
+const vbox = $('vbox'), NS = 'http://www.w3.org/2000/svg';
+PH.slice(0,3).forEach((p, i) => {
+  const q = PH[p.pair], y = p.y;
+  const l = document.createElementNS(NS, 'line');
+  l.setAttribute('x1', p.x + 100); l.setAttribute('x2', q.x - 100);
+  l.setAttribute('y1', y); l.setAttribute('y2', y);
+  l.setAttribute('class', 'pair'); l.id = 'pair' + i;
+  $('pairs').appendChild(l);
+  const pill = document.createElement('div');
+  pill.className = 'pill'; pill.id = 'pill' + i;
+  pill.style.left = (p.x + q.x) / 2 + 'px'; pill.style.top = y + 'px';
+  pill.textContent = i === 2 ? '検証' : ['要件を満たす？','基本設計どおり？'][i];
+  vbox.appendChild(pill);
+});
+/* 工程ノードを置く */
+PH.forEach((p, i) => {
+  const d = document.createElement('div');
+  d.className = 'ph ' + p.k; d.id = 'ph' + i;
+  d.style.left = (p.x - 100) + 'px'; d.style.top = (p.y - 52) + 'px';
+  d.innerHTML = `<span class="no">${i+1}</span><b${p.name.length>6?' style="font-size:20px"':''}>${p.name}</b><p>${p.goal}</p>`;
+  d.onclick = () => jump(i);
+  vbox.appendChild(d);
+});
+/* ステップ表示 */
+PH.forEach((p, i) => {
+  const s = document.createElement('div'); s.className = 'step';
+  s.innerHTML = `<span class="n">${i+1}</span><span class="l">${p.name.replace('・受入','')}</span>`;
+  s.onclick = () => jump(i); $('steps').appendChild(s);
+});
+
+/* ===========================================
+   SHOW — i番目の工程を強調する
+   =========================================== */
+const COLOR = { d:'var(--design)', i:'var(--impl)', t:'var(--test)' };
+let current = 0;
+function show(i){
+  current = i; const p = PH[i];
+  PH.forEach((_, j) => {
+    const el = $('ph' + j);
+    el.classList.toggle('act', j === i);
+    el.classList.toggle('pairhl', j === p.pair);
+    el.classList.toggle('dim', j !== i && j !== p.pair);
+  });
+  // 対応線：テスト工程のときに光らせる
+  [0,1,2].forEach(k => {
+    const on = p.k === 't' && p.pair === k;
+    $('pair' + k).classList.toggle('act', on); $('pill' + k).classList.toggle('act', on);
+  });
+  // マーカー移動（最後→最初はフェードで戻る）
+  const m = $('marker');
+  if (i === 0 && m.dataset.i === String(PH.length - 1)){
+    m.style.opacity = 0;
+    setTimeout(() => { m.style.transition = 'none'; place(m, p); void m.offsetWidth; m.style.transition = ''; m.style.opacity = 1; }, 300);
+  } else place(m, p);
+  m.dataset.i = i;
+  // 比較表の列
+  document.querySelectorAll('#cmp [data-col]').forEach(c => c.classList.toggle('colhl', p.col !== null && +c.dataset.col === p.col));
+  // 説明
+  const cap = $('caption'); cap.style.setProperty('--cc', COLOR[p.k]);
+  $('capNo').textContent = i + 1;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { $('capName').textContent = p.name; tx.innerHTML = p.cap; tx.classList.remove('fade'); }, 180);
+  [...$('steps').children].forEach((el, j) => { el.classList.toggle('past', j < i); el.classList.toggle('now', j === i); });
+}
+function place(m, p){ m.style.left = (p.x + 100 - 6) + 'px'; m.style.top = (p.y - 52 + 6) + 'px'; }
+
+/* ===========================================
+   PLAYER — 自動再生（ループ）・一時停止・ジャンプ
+   =========================================== */
+let playing = true, timer = null;
+const HOLD = 4200;
+function schedule(){ clearTimeout(timer); if (playing) timer = setTimeout(() => { show((current + 1) % PH.length); schedule(); }, HOLD); }
+function setPlaying(v){ playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生'; schedule(); }
+function jump(i){ show((i + PH.length) % PH.length); schedule(); }
+$('btnPlay').onclick = () => setPlaying(!playing);
+$('btnReplay').onclick = () => { show(0); setPlaying(true); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') jump(current + 1);
+  if (e.key === 'ArrowLeft') jump(current - 1);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .cmp td').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'v-model.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+show(0);
+setTimeout(schedule, 600);
+</script>
+</body>
+</html>
