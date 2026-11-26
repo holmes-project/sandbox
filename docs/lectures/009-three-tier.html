@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webの3層システムってなに？</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#ffb547;
+  --client:#eef3ff;   /* ブラウザ */
+  --web:#4fe3f0;      /* Webサーバ（第1層） */
+  --ap:#f4d03f;       /* APサーバ（第2層） */
+  --db:#ff7ab6;       /* DBサーバ（第3層） */
+  --req:#4fe3f0;      /* リクエスト */
+  --res:#b9a3ff;      /* レスポンス */
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(420px 380px at 725px 570px, rgba(79,227,240,.07), transparent 70%),
+    radial-gradient(420px 380px at 1195px 570px, rgba(244,208,63,.06), transparent 70%),
+    radial-gradient(420px 380px at 1665px 570px, rgba(255,122,182,.07), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:66px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — 3層システムをひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:182px;height:118px;border-radius:20px;background:linear-gradient(90deg,#221a0c,#121827 55%);border:2px solid rgba(255,181,71,.55);display:flex;align-items:center;padding:0 34px;gap:32px}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:6px}
+.hero-l .lb{font-size:18px;font-weight:900;color:#1a1205;background:var(--accent);border-radius:8px;padding:4px 12px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:34px;color:var(--accent);line-height:1}
+.hero-msg{font-size:32px;font-weight:900;line-height:1.42;flex:1}
+.hero-msg .w{color:var(--web)}.hero-msg .a{color:var(--ap)}.hero-msg .d{color:var(--db)}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(255,181,71,.4) 62%);color:#fff;padding:0 2px}
+
+/* ===========================================
+   GROUP LABELS — クライアント / 3層システム
+   =========================================== */
+.grp{position:absolute;top:318px;height:40px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
+.grp.cl{left:90px;width:330px;color:var(--muted)}
+.grp.sv{left:560px;width:1270px;color:var(--accent);border:2px solid rgba(255,181,71,.55);border-bottom:none;border-radius:14px 14px 0 0;height:30px;top:330px;align-items:flex-start}
+.grp.sv span{background:var(--slide-bg);padding:0 14px;margin-top:-16px}
+
+/* ===========================================
+   NODES — ブラウザ / Web / AP / DB
+   =========================================== */
+.node{position:absolute;top:372px;width:330px;height:410px;border-radius:18px;background:var(--panel);border:2px solid color-mix(in srgb,var(--k) 40%,#1f2a40);padding:16px 18px;transition:box-shadow .35s,border-color .35s}
+.node.act{border-color:var(--k);box-shadow:0 0 0 6px color-mix(in srgb,var(--k) 18%,transparent),0 0 50px color-mix(in srgb,var(--k) 18%,transparent)}
+.n-cl{left:90px;--k:var(--client)}
+.n-web{left:560px;--k:var(--web)}
+.n-ap{left:1030px;--k:var(--ap)}
+.n-db{left:1500px;--k:var(--db)}
+.layer{display:inline-block;font-size:14.5px;font-weight:900;color:#0a0e16;background:var(--k);border-radius:6px;padding:3px 10px}
+.n-cl .layer{background:#3a4766;color:#eef3ff}
+.nm{display:flex;align-items:center;gap:12px;margin:10px 0 6px}
+.nm .ic{font-size:38px;line-height:1}
+.nm b{font-size:30px;font-weight:900;color:var(--k)}
+.role{font-size:17px;font-weight:700;line-height:1.5;color:#d7def0;min-height:76px}
+.role b{color:var(--k)}
+.eg{font-size:15px;font-weight:700;color:var(--muted);margin-top:6px}
+.eg code{font-family:var(--font-code);color:#c9d4ee}
+.rest{display:inline-flex;align-items:center;gap:8px;margin-top:10px;font-size:16px;font-weight:900;padding:5px 12px;border-radius:999px;background:#0c1220;border:1.5px solid #2a3858}
+.rest i{font-style:normal;font-size:13px;color:var(--muted);font-weight:700}
+.status{position:absolute;left:18px;right:18px;bottom:16px;height:58px;border-radius:12px;background:#0a0f1a;border:1.5px dashed #2a3858;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:16.5px;font-weight:700;color:var(--muted);transition:all .3s}
+.status.on{border-style:solid;border-color:var(--k);color:var(--text);background:color-mix(in srgb,var(--k) 10%,#0a0f1a)}
+.status .dot{flex:none;width:10px;height:10px;border-radius:50%;background:#34415f}
+.status.on .dot{background:var(--k);box-shadow:0 0 10px var(--k);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+/* ミニブラウザ（クライアント） */
+.mini{margin-top:10px;border-radius:10px;background:#fff;overflow:hidden;height:178px;color:#222}
+.mini-top{height:26px;background:#dfe4ec;display:flex;align-items:center;gap:5px;padding:0 9px}
+.mini-top i{width:8px;height:8px;border-radius:50%;background:#b6bfcc}
+.mini-top span{margin-left:8px;font-family:var(--font-code);font-size:11px;color:#556}
+.mini-b{padding:10px 12px}
+.sbox{display:flex;gap:6px}
+.sbox .q{flex:1;height:30px;border-radius:6px;border:1.5px solid #aab3c2;font-size:15px;font-weight:700;display:flex;align-items:center;padding:0 8px}
+.sbox .go{width:60px;height:30px;border-radius:6px;background:#2b59c3;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.sbox .go.press{transform:scale(.88)}
+.res{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.res div{height:24px;border-radius:5px;background:#f1f4f8;font-size:13.5px;font-weight:700;display:flex;align-items:center;justify-content:space-between;padding:0 8px;opacity:0;transform:translateY(6px);transition:all .4s var(--ease)}
+.res div.on{opacity:1;transform:none}
+.res div b{color:#c2410c}
+.loading{font-size:13px;color:#889;text-align:center;margin-top:24px;display:none}
+.loading.on{display:block}
+
+/* ===========================================
+   LANES & PACKETS — 依頼（→）と返事（←）
+   =========================================== */
+.gap-lb{position:absolute;top:404px;width:140px;text-align:center;font-size:14px;font-weight:900;color:var(--muted)}
+.gap-lb.https{color:#3ddc97}
+.lane{position:absolute;width:140px;height:4px;opacity:.45}
+.lane.rq{top:500px;background:repeating-linear-gradient(90deg,var(--req) 0 12px,transparent 12px 22px)}
+.lane.rs{top:660px;background:repeating-linear-gradient(90deg,var(--res) 0 12px,transparent 12px 22px)}
+.lane.rq::after,.lane.rs::after{position:absolute;top:-10px;font-size:18px;line-height:1}
+.lane.rq::after{content:'▶';right:-6px;color:var(--req)}
+.lane.rs::after{content:'◀';left:-6px;color:var(--res)}
+.pkt{position:absolute;z-index:10;white-space:nowrap;font-family:var(--font-code);font-weight:700;font-size:16px;padding:8px 14px;border-radius:999px;will-change:transform;pointer-events:none}
+.pkt.rq{background:#07161a;border:2px solid var(--req);color:var(--req);box-shadow:0 0 22px rgba(79,227,240,.4)}
+.pkt.rs{background:#140f24;border:2px solid var(--res);color:#e2d8ff;box-shadow:0 0 22px rgba(185,163,255,.4);border-radius:10px}
+.pkt small{display:block;font-family:var(--font-body);font-size:12.5px;font-weight:900;opacity:.85}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:808px;height:96px;border-radius:18px;background:linear-gradient(90deg,#141a26,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:24px;padding:0 30px}
+.cap-no{flex:none;width:60px;height:60px;border-radius:50%;background:var(--cc,var(--accent));color:#0a0e16;font-family:var(--font-display);font-size:28px;display:flex;align-items:center;justify-content:center;transition:background .3s}
+.cap-who{flex:none;font-weight:900;font-size:26px;color:var(--cc,var(--accent));transition:color .3s}
+.cap-tx{font-size:25px;font-weight:700;line-height:1.4;transition:opacity .25s}
+.cap-tx b{color:var(--accent);font-weight:900}
+.cap-tx code{font-family:var(--font-code);font-size:21px;background:#1b2538;border-radius:6px;padding:1px 8px}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   FOOTER
+   =========================================== */
+.legend{position:absolute;left:90px;top:936px;display:flex;gap:12px}
+.chip{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#0f1626;border:1.5px solid var(--line);font-size:18px;font-weight:900}
+.chip i{font-style:normal;font-size:16px}
+.chip span{font-size:15px;color:var(--muted);font-weight:700}
+.steps{position:absolute;right:90px;top:932px;display:flex}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px;width:112px;cursor:pointer;position:relative}
+.step::before{content:'';position:absolute;top:17px;left:-50%;width:100%;height:3px;background:#24304a}
+.step:first-child::before{display:none}
+.step.past::before,.step.now::before{background:var(--accent)}
+.step .n{position:relative;z-index:1;width:36px;height:36px;border-radius:50%;background:#141c2c;border:2px solid #33415f;font-family:var(--font-code);font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .3s}
+.step .l{font-size:14.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.step.past .n{background:#2a2111;border-color:var(--accent);color:var(--accent)}
+.step.now .n{background:var(--accent);border-color:var(--accent);color:#1a1205;box-shadow:0 0 0 6px rgba(255,181,71,.18)}
+.step.now .l{color:var(--text)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1205}
+body.editing [data-edit]{outline:1.5px dashed rgba(255,181,71,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>3-TIER ARCHITECTURE <span>／ Webシステムの基本の形</span></div>
+      <h1 class="title" data-edit>Webの<em>3層システム</em>ってなに？</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">3層システム ＝</span></div>
+    <div class="hero-msg" data-edit>Webシステムを <span class="w">受付（Web）</span>・<span class="a">処理（AP）</span>・<span class="d">保管（DB）</span> の<br><mark>3つの役割に分けて</mark>、バケツリレーのように協力して動かすしくみ</div>
+  </div>
+
+  <!-- === GROUP LABELS === -->
+  <div class="grp cl reveal d3">クライアント（利用者側）</div>
+  <div class="grp sv reveal d3"><span>3層システム（サーバ側）</span></div>
+
+  <!-- === NODES === -->
+  <div class="node n-cl reveal d3" id="nCl">
+    <span class="layer">クライアント</span>
+    <div class="nm"><span class="ic">🧑‍💻</span><b>Webブラウザ</b></div>
+    <div class="role" data-edit style="min-height:auto">利用者が操作する画面。サーバに<b>お願い</b>して、返ってきた結果を表示する</div>
+    <div class="mini">
+      <div class="mini-top"><i></i><i></i><i></i><span>https://shop.example.com</span></div>
+      <div class="mini-b">
+        <div class="sbox"><span class="q" id="q"></span><span class="go" id="go">検索</span></div>
+        <div class="loading" id="loading">読み込み中…</div>
+        <div class="res" id="res">
+          <div>折りたたみ傘 <b>¥1,980</b></div>
+          <div>ビニール傘 <b>¥550</b></div>
+          <div>日傘（UVカット） <b>¥2,480</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="node n-web reveal d3" id="nWeb">
+    <span class="layer">第1層｜プレゼンテーション層</span>
+    <div class="nm"><span class="ic">🛎️</span><b>Webサーバ</b></div>
+    <div class="role" data-edit><b>受付係</b>。ブラウザとやり取りする窓口。画像やCSSはそのまま返し、計算が必要な依頼は AP へ回す</div>
+    <div class="eg">例：<code>nginx</code> / <code>Apache</code></div>
+    <div class="rest">🍽 レストランなら <i>ホール係</i></div>
+    <div class="status" id="sWeb"><span class="dot"></span><span>待機中</span></div>
+  </div>
+
+  <div class="node n-ap reveal d3" id="nAp">
+    <span class="layer">第2層｜アプリケーション層</span>
+    <div class="nm"><span class="ic">⚙️</span><b>APサーバ</b></div>
+    <div class="role" data-edit><b>処理係</b>。プログラムを動かして、検索・計算・注文などの<b>仕事の中身</b>を行い、結果のページを作る</div>
+    <div class="eg">例：<code>Java</code> / <code>PHP</code> / <code>Python</code> / <code>Node.js</code></div>
+    <div class="rest">🍽 レストランなら <i>料理人</i></div>
+    <div class="status" id="sAp"><span class="dot"></span><span>待機中</span></div>
+  </div>
+
+  <div class="node n-db reveal d3" id="nDb">
+    <span class="layer">第3層｜データ層</span>
+    <div class="nm"><span class="ic">🗄️</span><b>DBサーバ</b></div>
+    <div class="role" data-edit><b>保管係</b>。商品・会員・注文などのデータを<b>安全にしまっておき</b>、頼まれたら探して渡す</div>
+    <div class="eg">例：<code>MySQL</code> / <code>PostgreSQL</code> / <code>Oracle</code></div>
+    <div class="rest">🍽 レストランなら <i>食材倉庫</i></div>
+    <div class="status" id="sDb"><span class="dot"></span><span>待機中</span></div>
+  </div>
+
+  <!-- === LANES === -->
+  <div class="gap-lb https reveal d4" style="left:420px">🔒 HTTPS<br>インターネット</div>
+  <div class="gap-lb reveal d4" style="left:890px">サーバどうしの<br>やり取り</div>
+  <div class="gap-lb reveal d4" style="left:1360px">SQL<br>（DBへの命令）</div>
+  <div class="lane rq reveal d4" style="left:420px"></div><div class="lane rs reveal d4" style="left:420px"></div>
+  <div class="lane rq reveal d4" style="left:890px"></div><div class="lane rs reveal d4" style="left:890px"></div>
+  <div class="lane rq reveal d4" style="left:1360px"></div><div class="lane rs reveal d4" style="left:1360px"></div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4" id="caption">
+    <div class="cap-no" id="capNo">1</div>
+    <div class="cap-who" id="capWho"></div>
+    <div class="cap-tx" id="capTx"></div>
+  </div>
+
+  <!-- === FOOTER === -->
+  <div class="legend reveal d4">
+    <div class="chip" style="color:var(--req)"><i>▶</i>リクエスト<span>お願い</span></div>
+    <div class="chip" style="color:var(--res)"><i>◀</i>レスポンス<span>返事</span></div>
+    <div class="chip" style="color:var(--accent)"><i>💡</i>役割分担<span>直しやすく・増やしやすい</span></div>
+  </div>
+  <div class="steps reveal d4" id="steps"></div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+let token = 0, playing = true, current = 0;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('cancel'), ms));
+
+/* ===========================================
+   PACKET — 2つのノードの間を走る「お願い」「返事」
+   x はノードのつなぎ目の中央、dir: 1=右へ / -1=左へ
+   =========================================== */
+const GAP = { cw:490, wa:960, ad:1430 };   // 各すき間の中心X
+function packet(gap, dir, html, t){
+  if (t !== token) return Promise.reject('cancel');
+  const el = document.createElement('div');
+  el.className = 'pkt ' + (dir > 0 ? 'rq' : 'rs');
+  el.innerHTML = html;
+  el.style.left = GAP[gap] + 'px';
+  el.style.top = (dir > 0 ? 502 : 662) + 'px';
+  $('slide').appendChild(el);
+  const d = 190;
+  const a = el.animate([
+    { transform:`translate(-50%,-50%) translateX(${-d*dir}px) scale(.7)`, opacity:0 },
+    { transform:`translate(-50%,-50%) translateX(${-d*dir*0.6}px) scale(1)`, opacity:1, offset:.18 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir*0.6}px) scale(1)`, opacity:1, offset:.82 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir}px) scale(.7)`, opacity:0 }
+  ], { duration:1900, easing:'cubic-bezier(.45,0,.25,1)', fill:'forwards' });
+  return a.finished.then(() => { el.remove(); if (t !== token) throw 'cancel'; });
+}
+function status(id, text, on=true){
+  const s = $(id); s.classList.toggle('on', on); s.lastElementChild.textContent = text;
+}
+function act(ids){ ['nCl','nWeb','nAp','nDb'].forEach(n => $(n).classList.toggle('act', ids.includes(n))); }
+
+/* ===========================================
+   STEPS — 7つの場面（文言はここで編集）
+   =========================================== */
+const STEPS = [
+  { who:'ブラウザ', k:'var(--client)', l:'依頼する',
+    cap:'「傘」と入力して検索ボタンを押すと、ブラウザが <b>HTTPS</b> で Webサーバに「傘を探して」と<b>お願い（リクエスト）</b>します。',
+    async run(t){
+      act(['nCl']);
+      for (const ch of '傘') { $('q').textContent += ch; await sleep(300, t); }
+      $('go').classList.add('press'); await sleep(200, t); $('go').classList.remove('press');
+      $('loading').classList.add('on');
+      await packet('cw', 1, 'GET /search?q=傘<small>傘を探して！</small>', t);
+      act(['nWeb']); status('sWeb', 'リクエストを受け付けた');
+    }},
+  { who:'Webサーバ', k:'var(--web)', l:'受付',
+    cap:'受付係の Webサーバは「検索は自分では答えられない」と判断し、処理係の <b>APサーバ</b> に仕事を回します。',
+    async run(t){
+      act(['nWeb']); status('sWeb', 'APサーバに仕事を回す'); await sleep(700, t);
+      await packet('wa', 1, '検索して q=傘<small>処理をお願い</small>', t);
+      status('sWeb', '返事を待っている…'); act(['nAp']); status('sAp', 'プログラム実行中…');
+    }},
+  { who:'APサーバ', k:'var(--ap)', l:'処理',
+    cap:'APサーバでプログラムが動き、<b>DBサーバ</b> に <code>SELECT</code>（SQL）で「名前に“傘”が入った商品をちょうだい」と問い合わせます。',
+    async run(t){
+      act(['nAp']); status('sAp', 'SQLを作って問い合わせ'); await sleep(700, t);
+      await packet('ad', 1, "SELECT … '%傘%'<small>データをちょうだい</small>", t);
+      status('sAp', 'データを待っている…'); act(['nDb']); status('sDb', 'データを探している…');
+    }},
+  { who:'DBサーバ', k:'var(--db)', l:'データ',
+    cap:'DBサーバは保管している商品データから <b>3件</b> 見つけて、APサーバに返します。',
+    async run(t){
+      act(['nDb']); await sleep(900, t); status('sDb', '3件見つかった！'); await sleep(400, t);
+      await packet('ad', -1, '商品データ 3件<small>どうぞ</small>', t);
+      status('sDb', '待機中', false); act(['nAp']); status('sAp', 'データを受け取った');
+    }},
+  { who:'APサーバ', k:'var(--ap)', l:'ページ作成',
+    cap:'APサーバは受け取ったデータを使って <b>検索結果のページ（HTML）</b> を組み立て、Webサーバに返します。',
+    async run(t){
+      act(['nAp']); status('sAp', '結果ページ（HTML）を作成中'); await sleep(900, t);
+      await packet('wa', -1, '結果のHTML<small>できました</small>', t);
+      status('sAp', '待機中', false); act(['nWeb']); status('sWeb', 'HTMLを受け取った');
+    }},
+  { who:'Webサーバ', k:'var(--web)', l:'返事',
+    cap:'Webサーバが、できあがったページをブラウザに <b>返事（レスポンス）</b> として送り返します。',
+    async run(t){
+      act(['nWeb']); await sleep(500, t);
+      await packet('cw', -1, '200 OK（HTML）<small>お待たせしました</small>', t);
+      status('sWeb', '待機中', false); act(['nCl']);
+    }},
+  { who:'ブラウザ', k:'var(--client)', l:'表示',
+    cap:'ブラウザが結果を表示して完了！ 利用者からは1回の操作でも、裏では <b>3つの層がバケツリレー</b> しています。',
+    async run(t){
+      act(['nCl','nWeb','nAp','nDb']); $('loading').classList.remove('on');
+      const rs = [...$('res').children];
+      for (const r of rs){ r.classList.add('on'); await sleep(260, t); }
+      await sleep(600, t);
+    }}
+];
+STEPS.forEach((s, i) => {
+  const d = document.createElement('div'); d.className = 'step';
+  d.innerHTML = `<span class="n">${i+1}</span><span class="l">${s.l}</span>`;
+  d.onclick = () => jump(i); $('steps').appendChild(d);
+});
+
+/* ===========================================
+   STATE — 「k番目まで終わった」状態を画面に反映（ジャンプ・停止用）
+   =========================================== */
+function render(k){
+  $('q').textContent = k >= 0 ? '傘' : '';
+  $('loading').classList.toggle('on', k >= 0 && k < 6);
+  [...$('res').children].forEach(r => r.classList.toggle('on', k >= 6));
+  const W = ['', 'リクエストを受け付けた', '返事を待っている…', '返事を待っている…', '返事を待っている…', 'HTMLを受け取った', ''];
+  const A = ['', '', 'プログラム実行中…', 'データを待っている…', 'データを受け取った', '', ''];
+  const D = ['', '', '', 'データを探している…', '', '', ''];
+  const idx = k < 0 ? 0 : k;
+  status('sWeb', W[idx] || '待機中', k >= 0 && !!W[idx]);
+  status('sAp', A[idx] || '待機中', k >= 0 && !!A[idx]);
+  status('sDb', D[idx] || '待機中', k >= 0 && !!D[idx]);
+  act(k >= 6 ? ['nCl','nWeb','nAp','nDb'] : []);
+}
+function setStep(i){
+  current = i; const s = STEPS[i];
+  $('caption').style.setProperty('--cc', s.k);
+  $('capNo').textContent = i + 1;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { $('capWho').textContent = s.who; tx.innerHTML = s.cap; tx.classList.remove('fade'); }, 180);
+  [...$('steps').children].forEach((el, j) => { el.classList.toggle('past', j < i); el.classList.toggle('now', j === i); });
+}
+const clearPkts = () => document.querySelectorAll('.pkt').forEach(e => e.remove());
+
+/* ===========================================
+   PLAYER — 自動再生（ループ）・一時停止・ジャンプ
+   =========================================== */
+async function play(from, once=false){
+  const t = ++token; clearPkts(); let i = from;
+  try{
+    while (true){
+      setStep(i); render(i - 1);
+      await STEPS[i].run(t);
+      if (once || !playing) return;
+      await sleep(i === STEPS.length - 1 ? 4000 : 900, t);
+      i = (i + 1) % STEPS.length;
+    }
+  }catch(e){ /* キャンセル */ }
+}
+function setPlaying(v){ playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生'; }
+function togglePlay(){
+  if (playing){ setPlaying(false); token++; clearPkts(); render(current); }
+  else { setPlaying(true); play((current + 1) % STEPS.length); }
+}
+function jump(i){ i = (i + STEPS.length) % STEPS.length; play(i, !playing); }
+$('btnPlay').onclick = togglePlay;
+$('btnReplay').onclick = () => { setPlaying(true); play(0); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); togglePlay(); }
+  if (e.key === 'ArrowRight') jump(current + 1);
+  if (e.key === 'ArrowLeft') jump(current - 1);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit]').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'three-tier.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+render(-1);
+setTimeout(() => play(0), 900);
+</script>
+</body>
+</html>
