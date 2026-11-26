@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="デカフェコーヒーの基礎知識を簡潔に解説。定義、製法、残存カフェイン量、メリット、注意点、風味、FAQを紹介します。">
+<title>デカフェとは？｜基礎知識ガイド</title>
+<style>
+:root {
+  --coffee: #543b2e;
+  --coffee-light: #80604b;
+  --cream: #f6f1e9;
+  --paper: #fffdf9;
+  --accent: #c8a47c;
+  --text: #332a25;
+  --muted: #756b63;
+  --border: #e7ddd1;
+  --shadow: 0 8px 28px rgba(65, 45, 30, .07);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 95px; }
+body {
+  margin: 0; color: var(--text); background: var(--cream);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
+  line-height: 1.8;
+}
+a { color: inherit; }
+header {
+  position: sticky; top: 0; z-index: 10; background: rgba(255,253,249,.96);
+  border-bottom: 1px solid var(--border); backdrop-filter: blur(8px);
+}
+.header-inner {
+  max-width: 1100px; margin: auto; padding: 12px 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+}
+.brand { text-decoration: none; font-weight: 800; letter-spacing: .04em; color: var(--coffee); white-space: nowrap; }
+nav { display: flex; gap: 8px; overflow-x: auto; padding: 3px 0; }
+nav a {
+  font-size: .82rem; text-decoration: none; white-space: nowrap;
+  padding: 5px 10px; border-radius: 999px; color: var(--muted);
+}
+nav a:hover, nav a:focus-visible { background: var(--cream); color: var(--coffee); }
+main { max-width: 900px; margin: 0 auto; padding: 30px 22px 70px; }
+.hero {
+  background: linear-gradient(135deg, #e8dccb, #f8f2e9);
+  border: 1px solid #ded0bf; border-radius: 24px; padding: 48px 36px;
+  margin-bottom: 26px; text-align: center;
+}
+.eyebrow { color: var(--coffee-light); font-size: .78rem; font-weight: 700; letter-spacing: .18em; }
+h1 { color: var(--coffee); font-size: clamp(2rem, 6vw, 3rem); line-height: 1.3; margin: 8px 0 14px; }
+.hero p { max-width: 650px; margin: auto; color: #5f5045; }
+section {
+  background: var(--paper); border: 1px solid var(--border); border-radius: 18px;
+  padding: 28px 30px; margin: 20px 0; box-shadow: var(--shadow);
+}
+h2 { margin: 0 0 18px; color: var(--coffee); font-size: 1.35rem; display: flex; gap: 12px; align-items: baseline; }
+h2 .num { color: var(--accent); font-size: .85rem; letter-spacing: .08em; }
+h3 { font-size: 1.05rem; color: var(--coffee-light); margin: 22px 0 8px; }
+p { margin: 8px 0 12px; }
+ul { padding-left: 1.3em; margin: 8px 0; }
+li { margin: 5px 0; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mini-card { background: #faf6f0; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.mini-card h3 { margin: 0 0 7px; }
+.callout { background: #f3e9dc; border-left: 4px solid var(--accent); padding: 14px 16px; border-radius: 8px; margin: 16px 0; }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .94rem; }
+th, td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; vertical-align: top; }
+th { background: #f4ede4; color: var(--coffee); }
+.faq details { border-top: 1px solid var(--border); padding: 13px 0; }
+.faq details:last-child { border-bottom: 1px solid var(--border); }
+.faq summary { cursor: pointer; font-weight: 700; color: var(--coffee); }
+.faq details p { margin: 9px 0 0; }
+small, .note { color: var(--muted); font-size: .88rem; }
+footer { text-align: center; padding: 25px 22px; color: var(--muted); font-size: .86rem; }
+.back-top { display: inline-block; margin-top: 10px; color: var(--coffee-light); }
+@media (max-width: 650px) {
+  .header-inner { flex-direction: column; align-items: flex-start; gap: 5px; padding: 10px 16px; }
+  nav { width: 100%; }
+  main { padding: 20px 14px 50px; }
+  .hero { padding: 32px 20px; border-radius: 18px; }
+  section { padding: 22px 18px; }
+  .grid { grid-template-columns: 1fr; }
+  table { font-size: .85rem; }
+  th, td { padding: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header id="top">
+  <div class="header-inner">
+    <a class="brand" href="#top">DECAF GUIDE</a>
+    <nav aria-label="ページ内ナビゲーション">
+      <a href="#definition">デカフェとは</a>
+      <a href="#process">製法</a>
+      <a href="#amount">残存量</a>
+      <a href="#benefits">メリット</a>
+      <a href="#cautions">注意点</a>
+      <a href="#taste">味・風味</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+  </div>
+</header>
+<main>
+  <div class="hero">
+    <div class="eyebrow">COFFEE KNOWLEDGE</div>
+    <h1>デカフェとは？</h1>
+    <p>カフェインを減らしたコーヒーの基礎知識。仕組みや製法、通常のコーヒーとの違いを簡潔に紹介します。</p>
+  </div>
+
+  <section id="definition">
+    <h2><span class="num">01</span>デカフェとは</h2>
+    <p><strong>デカフェ（decaffeinated）</strong>は、コーヒー豆などからカフェインを取り除く処理を施したものです。カフェインを完全にゼロにするとは限らず、少量が残る場合があります。</p>
+    <div class="grid">
+      <div class="mini-card"><h3>デカフェ</h3><p>カフェインを除去する処理をした飲料・食品を指す言葉です。</p></div>
+      <div class="mini-card"><h3>カフェインレス</h3><p>日本ではデカフェとほぼ同じ意味で使われることが多い表現です。</p></div>
+      <div class="mini-card"><h3>ノンカフェイン</h3><p>もともとカフェインを含まない、または含有しないことを示す表現として使われます。商品表示の意味は確認しましょう。</p></div>
+      <div class="mini-card"><h3>低カフェイン</h3><p>カフェイン量が少なめのものを指す表現。必ずしも除去処理済みとは限りません。</p></div>
+    </div>
+  </section>
+
+  <section id="process">
+    <h2><span class="num">02</span>カフェインの除去方法</h2>
+    <p>一般的には、焙煎前の生豆を水分で膨潤させ、カフェインを抽出・分離する処理を行います。代表的な方法は次のとおりです。</p>
+    <div class="grid">
+      <div class="mini-card"><h3>水を使う方法</h3><p>水とフィルターなどを利用し、カフェインを分離します。特定の製法では、コーヒー成分を保ちながらカフェインを選択的に取り除く工夫をしています。</p></div>
+      <div class="mini-card"><h3>溶媒を使う方法</h3><p>カフェインを溶かす性質を持つ溶媒を利用して除去します。使用する溶媒や工程は製法によって異なります。</p></div>
+      <div class="mini-card"><h3>二酸化炭素を使う方法</h3><p>特定の条件下の二酸化炭素を利用し、カフェインを抽出する方法です。</p></div>
+    </div>
+    <p class="note">いずれも工程管理や品質管理が行われます。製法によって風味やコストなどに違いが生じることがあります。</p>
+  </section>
+
+  <section id="amount">
+    <h2><span class="num">03</span>カフェイン残存量</h2>
+    <p>デカフェはカフェインを大幅に減らしていますが、処理後にも少量残ることがあります。量は豆、製法、抽出条件、飲む量などによって変わります。</p>
+    <div class="callout"><strong>ポイント：</strong>「デカフェ＝カフェインゼロ」とは限りません。厳密に摂取量を管理したい場合は、商品表示やメーカーの情報を確認してください。</div>
+    <p class="note">カフェイン量は商品や抽出方法で変動するため、ここでは一律の数値比較を掲載していません。</p>
+  </section>
+
+  <section id="benefits">
+    <h2><span class="num">04</span>デカフェのメリット</h2>
+    <ul>
+      <li><strong>カフェイン摂取量を減らせる：</strong>コーヒーの風味や習慣を楽しみながら、カフェイン摂取を抑える選択肢になります。</li>
+      <li><strong>時間帯を選びやすい：</strong>カフェインの影響を避けたい夜などに選ばれることがあります。ただし、残存量や個人差に留意しましょう。</li>
+      <li><strong>カフェインに敏感な人の選択肢：</strong>カフェインによる刺激を感じやすい人が、摂取量を調整する際に利用できます。</li>
+    </ul>
+    <p class="note">デカフェにしても、睡眠などへの影響が必ずなくなるわけではありません。</p>
+  </section>
+
+  <section id="cautions">
+    <h2><span class="num">05</span>注意点</h2>
+    <ul>
+      <li>カフェインが完全に除去されているとは限らない。</li>
+      <li>カフェイン以外のコーヒー成分は含まれている。</li>
+      <li>体質や健康状態によって、適切な摂取量は異なる。</li>
+      <li>カフェイン摂取を厳しく制限する必要がある場合は、医療専門家に相談し、製品の含有量を確認する。</li>
+    </ul>
+  </section>
+
+  <section id="taste">
+    <h2><span class="num">06</span>味・風味は普通のコーヒーと違う？</h2>
+    <p>デカフェでもコーヒーらしい香りや味わいを楽しめます。ただし、カフェイン除去工程や豆の種類、焙煎、抽出によって風味が変わることがあります。</p>
+    <div class="grid">
+      <div class="mini-card"><h3>風味の違い</h3><p>商品によっては香りやコクが控えめに感じられることがありますが、差は製品ごとに異なります。</p></div>
+      <div class="mini-card"><h3>選び方</h3><p>豆の産地、焙煎度、製法やレビューなどを参考に、自分の好みに合うものを探すとよいでしょう。</p></div>
+    </div>
+  </section>
+
+  <section id="faq" class="faq">
+    <h2><span class="num">07</span>よくある質問（FAQ）</h2>
+    <details>
+      <summary>デカフェなら夜に飲んでも眠れますか？</summary>
+      <p>カフェイン量が少ないため、通常のコーヒーより影響を抑えられる可能性があります。ただし、少量のカフェインが残る場合があり、影響には個人差があります。</p>
+    </details>
+    <details>
+      <summary>デカフェはカフェインゼロですか？</summary>
+      <p>必ずしもゼロではありません。製品によって残存量が異なります。</p>
+    </details>
+    <details>
+      <summary>デカフェの作り方はどれも同じですか？</summary>
+      <p>いいえ。水、溶媒、二酸化炭素などを利用する複数の方法があります。</p>
+    </details>
+    <details>
+      <summary>普通のコーヒーと同じように飲めますか？</summary>
+      <p>通常のコーヒーと同じように淹れて楽しめる商品が多く、豆や粉、ドリップ、インスタントなどさまざまな形で販売されています。</p>
+    </details>
+  </section>
+  <p class="note">本ページは一般的な情報提供を目的としています。健康上の判断や個別の摂取制限については、医療専門家にご相談ください。</p>
+</main>
+<footer>
+  <p>DECAF GUIDE · デカフェの基礎知識</p>
+  <a class="back-top" href="#top">ページ上部へ戻る ↑</a>
+</footer>
+</body>
+</html>
