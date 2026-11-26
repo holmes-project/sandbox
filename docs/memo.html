@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>メモ（疑似CRUD）</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+    li { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
+    li span { flex: 1; }
+  </style>
+</head>
+<body>
+  <h1>メモ</h1>
+  <input id="input" placeholder="メモを入力">
+  <button id="addBtn">追加</button>
+  <ul id="list"></ul>
+
+  <script>
+    // データ本体（メモリ上の配列）
+    let memos = [];
+    let nextId = 1;
+
+    // Create
+    function createMemo(text) {
+      memos.push({ id: nextId++, text });
+      render();
+    }
+
+    // Update
+    function updateMemo(id, text) {
+      const memo = memos.find(m => m.id === id);
+      if (memo) memo.text = text;
+      render();
+    }
+
+    // Delete
+    function deleteMemo(id) {
+      memos = memos.filter(m => m.id !== id);
+      render();
+    }
+
+    // Read（配列の内容を画面に描画）
+    function render() {
+      const list = document.getElementById('list');
+      list.innerHTML = '';
+      memos.forEach(memo => {
+        const li = document.createElement('li');
+
+        const span = document.createElement('span');
+        span.textContent = memo.text;
+
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '編集';
+        editBtn.onclick = () => {
+          const text = prompt('新しい内容', memo.text);
+          if (text !== null && text.trim()) updateMemo(memo.id, text.trim());
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '削除';
+        delBtn.onclick = () => deleteMemo(memo.id);
+
+        li.append(span, editBtn, delBtn);
+        list.appendChild(li);
+      });
+    }
+
+    document.getElementById('addBtn').onclick = () => {
+      const input = document.getElementById('input');
+      const text = input.value.trim();
+      if (!text) return;
+      createMemo(text);
+      input.value = '';
+    };
+  </script>
+</body>
+</html>
