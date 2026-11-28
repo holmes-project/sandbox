@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSONってなに？ 構造・用途・メリットとデメリット</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#f4d03f;    /* JSON（主役） */
+  --key:#9ecbff;       /* キー */
+  --str:#a5e8a0;       /* 文字列 */
+  --num:#ffb57a;       /* 数値 */
+  --bool:#ff7ab6;      /* 真偽値 */
+  --nul:#b0b8c8;       /* null */
+  --arr:#4fe3f0;       /* 配列 */
+  --obj:#c4a7ff;       /* オブジェクト */
+  --good:#2ee6a8;
+  --bad:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(560px 460px at 480px 640px, rgba(244,208,63,.06), transparent 70%),
+    radial-gradient(600px 360px at 1400px 480px, rgba(79,227,240,.06), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:64px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+
+/* ===========================================
+   HERO — JSONをひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:180px;height:118px;border-radius:20px;background:linear-gradient(90deg,#211d0a,#121827 60%);border:2px solid rgba(244,208,63,.6);display:flex;align-items:center;padding:0 32px;gap:30px}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:6px}
+.hero-l .lb{font-size:17px;font-weight:900;color:#1a1505;background:var(--accent);border-radius:7px;padding:3px 11px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:36px;color:var(--accent);line-height:1}
+.hero-msg{flex:1;font-size:30px;font-weight:900;line-height:1.4}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(244,208,63,.42) 62%);color:#fff;padding:0 2px}
+.hero-msg small{display:block;font-size:17px;color:var(--muted);font-weight:700}
+.hero-msg small code{font-family:var(--font-code);color:#ffe9a0}
+.mini-ex{flex:none;font-family:var(--font-code);font-size:22px;font-weight:700;background:#0a0f1a;border:1.5px solid #2a3858;border-radius:12px;padding:14px 20px;white-space:nowrap}
+
+/* ===========================================
+   STRUCTURE — データ構造
+   =========================================== */
+.box{position:absolute;border-radius:18px;background:var(--panel);border:1.5px solid var(--line);padding:18px 22px}
+.box-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.box-h .no{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#1a1505;font-family:var(--font-display);font-size:18px;display:flex;align-items:center;justify-content:center}
+.box-h b{font-size:26px;font-weight:900}
+.box-h span{font-size:16px;color:var(--muted);font-weight:700}
+.st{left:90px;top:320px;width:850px;height:720px}
+.code{position:absolute;left:22px;top:70px;width:470px;border-radius:14px;background:#070b13;border:1.5px solid #1f293e;padding:14px 0}
+.code .fn{position:absolute;right:12px;top:-12px;font-family:var(--font-code);font-size:13px;background:#1b2538;color:var(--muted);border-radius:6px;padding:2px 8px}
+.ln{font-family:var(--font-code);font-size:20px;line-height:34px;white-space:pre;padding:0 18px;color:#c9d4ee}
+.tk{border-radius:5px;transition:background .3s,box-shadow .3s,color .3s;padding:1px 0}
+.k{color:var(--key)}.s{color:var(--str)}.n{color:var(--num)}.b{color:var(--bool)}.z{color:var(--nul)}.a{color:var(--arr);font-weight:700}.o{color:var(--obj);font-weight:700}
+.tk.hl{background:color-mix(in srgb,var(--c) 28%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 28%,transparent);color:#fff}
+.code.dim .tk:not(.hl){opacity:.45}
+.rules{position:absolute;left:22px;top:522px;width:470px;border-radius:12px;background:#0c1220;border:1.5px dashed #33415f;padding:12px 16px}
+.rules h4{font-size:16px;font-weight:900;color:var(--accent);margin-bottom:6px}
+.rules li{list-style:none;font-size:16px;font-weight:700;line-height:1.65;color:#d7def0}
+.rules li::before{content:'✔ ';color:var(--accent)}
+.rules code{font-family:var(--font-code);color:#ffe9a0;background:#1b2538;border-radius:4px;padding:0 5px}
+
+.types{position:absolute;left:512px;top:70px;width:316px;display:flex;flex-direction:column;gap:8px}
+.ty{border-radius:12px;background:#0c1220;border:1.5px solid #222d45;padding:9px 14px;cursor:pointer;transition:border-color .3s,background .3s,transform .3s var(--ease)}
+.ty:hover{border-color:var(--c)}
+.ty.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,#0c1220);transform:translateX(-6px)}
+.ty-h{display:flex;align-items:center;gap:10px}
+.ty-h b{font-size:19px;font-weight:900;color:var(--c)}
+.ty-h code{margin-left:auto;font-family:var(--font-code);font-size:15px;color:#fff;background:#1b2538;border-radius:6px;padding:1px 8px}
+.ty p{font-size:14.5px;font-weight:700;color:var(--muted);margin-top:2px;line-height:1.4}
+
+/* ===========================================
+   USES — 主な用途（Web API のアニメーション）
+   =========================================== */
+.us{left:970px;top:320px;width:860px;height:372px}
+.api{position:absolute;left:22px;right:22px;top:68px;height:180px;border-radius:14px;background:#0c1220;border:1.5px solid color-mix(in srgb,var(--arr) 50%,#1f2a40)}
+.api-tag{position:absolute;left:14px;top:-13px;font-size:14px;font-weight:900;color:#06161a;background:var(--arr);border-radius:6px;padding:2px 10px}
+.node{position:absolute;top:22px;width:190px;height:136px;border-radius:12px;background:#111827;border:1.5px solid #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center}
+.node .ic{font-size:32px;line-height:1}
+.node b{font-size:17px;font-weight:900}
+.node small{font-size:13px;color:var(--muted);font-weight:700}
+.n-app{left:16px}
+.n-srv{right:16px}
+.card{width:150px;height:44px;border-radius:8px;background:#fff;color:#222;font-size:13px;font-weight:900;display:flex;flex-direction:column;justify-content:center;padding:0 10px;text-align:left;opacity:0;transform:scale(.8);transition:all .4s var(--ease)}
+.card.on{opacity:1;transform:none}
+.card span{color:#c2410c}
+.lane{position:absolute;left:222px;right:222px;height:3px;opacity:.4}
+.lane.rq{top:62px;background:repeating-linear-gradient(90deg,var(--arr) 0 10px,transparent 10px 18px)}
+.lane.rs{top:124px;background:repeating-linear-gradient(90deg,var(--accent) 0 10px,transparent 10px 18px)}
+.ll{position:absolute;left:222px;right:222px;text-align:center;font-size:13px;font-weight:900}
+.pk{position:absolute;left:50%;font-family:var(--font-code);font-size:14px;font-weight:700;white-space:nowrap;padding:6px 12px;border-radius:8px;opacity:0;pointer-events:none}
+.pk.rq{top:62px;background:#07161a;border:1.5px solid var(--arr);color:var(--arr)}
+.pk.rs{top:124px;background:#1a1606;border:1.5px solid var(--accent);color:#ffe9a0;line-height:1.35}
+.others{position:absolute;left:22px;right:22px;top:266px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.oth{border-radius:12px;background:#0c1220;border:1.5px solid #222d45;padding:10px 12px}
+.oth b{display:block;font-size:16.5px;font-weight:900}
+.oth small{display:block;font-size:13.5px;color:var(--muted);font-weight:700;margin-top:3px;line-height:1.4}
+.oth code{font-family:var(--font-code);color:#ffe9a0}
+
+/* ===========================================
+   PROS / CONS — メリット・デメリット
+   =========================================== */
+.pc{left:970px;top:708px;width:860px;height:332px}
+.pc .box-h{margin-bottom:8px}
+.pc-cols{display:flex;gap:16px}
+.col{flex:1;border-radius:14px;padding:10px 16px;border:1.5px solid}
+.col.good{background:#0b1a16;border-color:rgba(46,230,168,.45)}
+.col.bad{background:#1d1013;border-color:rgba(255,107,107,.45)}
+.col h4{font-size:19px;font-weight:900;margin-bottom:2px}
+.col.good h4{color:var(--good)}.col.bad h4{color:var(--bad)}
+.col li{list-style:none;font-size:16px;font-weight:700;line-height:1.38;padding:3px 0;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:8px}
+.col li:first-child{border-top:none}
+.col li i{font-style:normal;flex:none}
+.col li small{display:block;font-size:13.5px;color:var(--muted);font-weight:700}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1505}
+body.editing [data-edit]{outline:1.5px dashed rgba(244,208,63,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div class="kicker" data-edit>JSON <span>／ JavaScript Object Notation（ジェイソン）</span></div>
+    <h1 class="title" data-edit><em>JSON</em>ってなに？ データの書き方のルール</h1>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">JSON ＝</span></div>
+    <div class="hero-msg" data-edit>データを<mark>「名前: 値」の組み合わせ</mark>で書く、<br>人にもコンピュータにも読みやすい<mark>文字のデータ形式</mark>
+      <small>JavaScript から生まれたが、今はほぼすべての言語で使える共通の書き方（拡張子 <code>.json</code>）</small></div>
+    <div class="mini-ex"><span class="k">"name"</span>: <span class="s">"傘"</span></div>
+  </div>
+
+  <!-- === ① STRUCTURE === -->
+  <div class="box st reveal d3">
+    <div class="box-h"><span class="no">1</span><b>データ構造</b><span>右の種類をクリックすると、該当する部分が光ります</span></div>
+    <div class="code" id="code">
+      <span class="fn">product.json</span>
+      <div class="ln"><span class="tk o" data-t="obj">{</span></div>
+      <div class="ln">  <span class="tk k" data-t="key">"id"</span>: <span class="tk n" data-t="num">1</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"name"</span>: <span class="tk s" data-t="str">"折りたたみ傘"</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"price"</span>: <span class="tk n" data-t="num">1980</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"inStock"</span>: <span class="tk b" data-t="bool">true</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"colors"</span>: <span class="tk a" data-t="arr">[</span><span class="tk s" data-t="str">"黒"</span>, <span class="tk s" data-t="str">"紺"</span>, <span class="tk s" data-t="str">"赤"</span><span class="tk a" data-t="arr">]</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"maker"</span>: <span class="tk o" data-t="nest">{</span></div>
+      <div class="ln">    <span class="tk k" data-t="key">"name"</span>: <span class="tk s" data-t="str">"雨具工房"</span>,</div>
+      <div class="ln">    <span class="tk k" data-t="key">"country"</span>: <span class="tk s" data-t="str">"日本"</span></div>
+      <div class="ln">  <span class="tk o" data-t="nest">}</span>,</div>
+      <div class="ln">  <span class="tk k" data-t="key">"discount"</span>: <span class="tk z" data-t="null">null</span></div>
+      <div class="ln"><span class="tk o" data-t="obj">}</span></div>
+    </div>
+    <div class="rules">
+      <h4>書き方のきまり</h4>
+      <ul>
+        <li>キー（名前）は必ず <code>"</code> ダブルクォートで囲む</li>
+        <li>「キー」と「値」は <code>:</code>、項目どうしは <code>,</code> で区切る</li>
+        <li>最後の項目のあとに <code>,</code> は付けない</li>
+        <li>コメント（メモ書き）は書けない</li>
+      </ul>
+    </div>
+    <div class="types" id="types"></div>
+  </div>
+
+  <!-- === ② USES === -->
+  <div class="box us reveal d3">
+    <div class="box-h"><span class="no">2</span><b>主な用途</b><span>いちばん多いのは Web API のやり取り</span></div>
+    <div class="api">
+      <span class="api-tag">★ Web API の通信（いちばん多い使い方）</span>
+      <div class="node n-app"><span class="ic">📱</span><b>アプリ・ブラウザ</b><div class="card" id="pcard">折りたたみ傘<span>¥1,980</span></div><small id="appSt">商品を表示したい</small></div>
+      <div class="lane rq"></div><div class="lane rs"></div>
+      <div class="ll" style="top:36px;color:var(--arr)">リクエスト ▶</div>
+      <div class="ll" style="top:136px;color:var(--accent)">◀ レスポンス（JSONで返る）</div>
+      <div class="pk rq" id="pkRq">GET /api/products/1</div>
+      <div class="pk rs" id="pkRs">{"id":1, "name":"折りたたみ傘",<br> "price":1980}</div>
+      <div class="node n-srv"><span class="ic">🖥️</span><b>Web APIサーバ</b><small>データをJSONにして返す</small></div>
+    </div>
+    <div class="others">
+      <div class="oth"><b>⚙️ 設定ファイル</b><small>アプリの設定を書く<br>例：<code>package.json</code></small></div>
+      <div class="oth"><b>💾 データの保存</b><small>JSONのまま保存できるDBもある（例：MongoDB）</small></div>
+      <div class="oth"><b>🔗 システム連携</b><small>違う言語・会社のシステムどうしで受け渡し</small></div>
+      <div class="oth"><b>📝 ログ出力</b><small>記録を項目ごとに残して後で集計しやすく</small></div>
+    </div>
+  </div>
+
+  <!-- === ③ PROS / CONS === -->
+  <div class="box pc reveal d4">
+    <div class="box-h"><span class="no">3</span><b>メリット・デメリット</b></div>
+    <div class="pc-cols">
+      <div class="col good"><h4>👍 メリット</h4><ul>
+        <li><i>✅</i><div>シンプルで人が読みやすい<small>XML などより短く書ける</small></div></li>
+        <li><i>✅</i><div>ほぼすべての言語で使える<small>Java・Python・PHP など共通</small></div></li>
+        <li><i>✅</i><div>JavaScript と相性ばつぐん<small>Webの画面でそのまま扱える</small></div></li>
+        <li><i>✅</i><div>入れ子で階層を表せる<small>商品の中にメーカー情報…など</small></div></li>
+      </ul></div>
+      <div class="col bad"><h4>👎 デメリット</h4><ul>
+        <li><i>⚠️</i><div>コメントが書けない<small>設定ファイルで説明を残しにくい</small></div></li>
+        <li><i>⚠️</i><div>書き方にきびしい<small>カンマ1つの間違いで全体が読めない</small></div></li>
+        <li><i>⚠️</i><div>日付などの型がない<small>日付は文字列で書くなど工夫が必要</small></div></li>
+        <li><i>⚠️</i><div>大量データだと重くなりがち<small>毎回キー名を書くため（CSVより大きい）</small></div></li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   TYPES — 値の種類（文言はここで編集）
+   =========================================== */
+const TYPES = [
+  { t:'key',  name:'キー（名前）', ex:'"price"', c:'var(--key)', d:'何のデータかを表す名前。必ず " " で囲む' },
+  { t:'str',  name:'文字列',       ex:'"傘"',    c:'var(--str)', d:'文字のデータ。" " で囲む' },
+  { t:'num',  name:'数値',         ex:'1980',    c:'var(--num)', d:'数字。" " で囲まない' },
+  { t:'bool', name:'真偽値',       ex:'true',    c:'var(--bool)',d:'はい / いいえ（true / false）' },
+  { t:'null', name:'null',         ex:'null',    c:'var(--nul)', d:'「値がない」ことを表す' },
+  { t:'arr',  name:'配列',         ex:'[ ]',     c:'var(--arr)', d:'値を順番に並べたリスト' },
+  { t:'nest', name:'オブジェクト', ex:'{ }',     c:'var(--obj)', d:'「キー: 値」のまとまり。中に入れ子にもできる' }
+];
+TYPES.forEach((y, i) => {
+  const d = document.createElement('div');
+  d.className = 'ty'; d.style.setProperty('--c', y.c);
+  d.innerHTML = `<div class="ty-h"><b>${y.name}</b><code>${y.ex}</code></div><p>${y.d}</p>`;
+  d.onclick = () => { showType(i); restartTypes(); };
+  d.onmouseenter = () => { showType(i); clearInterval(tTimer); };
+  d.onmouseleave = restartTypes;
+  $('types').appendChild(d);
+});
+let tCur = 0, tTimer = null;
+function showType(i){
+  tCur = i; const y = TYPES[i];
+  [...$('types').children].forEach((el, j) => el.classList.toggle('on', j === i));
+  $('code').classList.add('dim');
+  document.querySelectorAll('.tk').forEach(el => {
+    const on = el.dataset.t === y.t || (y.t === 'nest' && el.dataset.t === 'obj');
+    el.classList.toggle('hl', on);
+    el.style.setProperty('--c', y.c);
+  });
+}
+function restartTypes(){ clearInterval(tTimer); tTimer = setInterval(() => showType((tCur + 1) % TYPES.length), 2600); }
+
+/* ===========================================
+   API ANIMATION — リクエスト → JSONのレスポンス → 画面に表示
+   =========================================== */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function fly(el, dir){
+  return el.animate([
+    { transform:`translateX(calc(-50% + ${-150*dir}px))`, opacity:0 },
+    { transform:`translateX(calc(-50% + ${-110*dir}px))`, opacity:1, offset:.15 },
+    { transform:`translateX(calc(-50% + ${110*dir}px))`, opacity:1, offset:.85 },
+    { transform:`translateX(calc(-50% + ${150*dir}px))`, opacity:0 }
+  ], { duration: reduce ? 10 : 1800, easing:'cubic-bezier(.45,0,.25,1)', fill:'forwards' }).finished;
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function apiLoop(){
+  while (true){
+    $('pcard').classList.remove('on'); $('appSt').textContent = '商品を表示したい';
+    await wait(900);
+    $('appSt').textContent = 'データをちょうだい';
+    await fly($('pkRq'), 1);
+    await wait(500);
+    await fly($('pkRs'), -1);
+    $('appSt').textContent = 'JSONを読んで表示！';
+    $('pcard').classList.add('on');
+    await wait(2600);
+  }
+}
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .col li, .oth, .rules li').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'json.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+setTimeout(() => { showType(0); restartTypes(); apiLoop(); }, 900);
+</script>
+</body>
+</html>

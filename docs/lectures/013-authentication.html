@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>認証ってなに？ 3つの要素と多要素認証・二段階認証</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#ffb547;
+  --know:#5aa2ff;    /* 知識情報 */
+  --have:#ff9f5a;    /* 所持情報 */
+  --bio:#2ee6a8;     /* 生体情報 */
+  --ok:#2ee6a8;
+  --warn:#f4d03f;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(420px 300px at 380px 460px, rgba(90,162,255,.07), transparent 70%),
+    radial-gradient(420px 300px at 960px 460px, rgba(255,159,90,.06), transparent 70%),
+    radial-gradient(420px 300px at 1540px 460px, rgba(46,230,168,.06), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:62px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — 認証をひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:176px;height:110px;border-radius:20px;background:linear-gradient(90deg,#221a0c,#121827 60%);border:2px solid rgba(255,181,71,.6);display:flex;align-items:center;padding:0 32px;gap:30px}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:6px}
+.hero-l .lb{font-size:17px;font-weight:900;color:#1a1205;background:var(--accent);border-radius:7px;padding:3px 11px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:36px;color:var(--accent);line-height:1}
+.hero-msg{flex:1;font-size:31px;font-weight:900;line-height:1.4}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(255,181,71,.42) 62%);color:#fff;padding:0 2px}
+.hero-msg small{display:block;font-size:17px;color:var(--muted);font-weight:700}
+.vs{flex:none;border-radius:12px;background:#0c1220;border:1.5px solid #2a3858;padding:10px 16px;font-size:15.5px;font-weight:700;line-height:1.6;color:var(--muted)}
+.vs b{color:#fff}
+
+/* ===========================================
+   FACTORS — 認証に使える3つの情報
+   =========================================== */
+.sec-t{position:absolute;left:90px;font-size:20px;font-weight:900;color:var(--muted);display:flex;align-items:center;gap:10px}
+.sec-t i{font-style:normal;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#1a1205;font-family:var(--font-display);font-size:16px;display:flex;align-items:center;justify-content:center}
+.sec-t b{color:var(--text);font-size:22px}
+.factors{position:absolute;left:90px;right:90px;top:340px;height:228px;display:flex;gap:20px}
+.fc{flex:1;border-radius:18px;background:var(--panel);border:2px solid color-mix(in srgb,var(--k) 40%,#1f2a40);padding:16px 20px;transition:border-color .35s,box-shadow .35s,transform .35s var(--ease)}
+.fc.act{border-color:var(--k);box-shadow:0 0 0 6px color-mix(in srgb,var(--k) 18%,transparent),0 0 40px color-mix(in srgb,var(--k) 18%,transparent);transform:translateY(-4px)}
+.fc-h{display:flex;align-items:center;gap:14px}
+.fc-h .ic{width:56px;height:56px;border-radius:14px;background:color-mix(in srgb,var(--k) 18%,#0c1220);display:flex;align-items:center;justify-content:center;font-size:30px}
+.fc-h b{display:block;font-size:30px;font-weight:900;color:var(--k);line-height:1.15}
+.fc-h small{display:block;font-size:17px;font-weight:900;color:#d7def0}
+.fc-h .en{margin-left:auto;font-family:var(--font-code);font-size:13px;color:var(--muted);text-align:right;line-height:1.4}
+.chips{display:flex;gap:8px;margin:14px 0 12px;flex-wrap:wrap}
+.chips span{font-size:17px;font-weight:700;padding:7px 14px;border-radius:999px;background:#0c1220;border:1.5px solid color-mix(in srgb,var(--k) 45%,#26324c)}
+.weak{border-top:1px dashed #2a3858;padding-top:10px;font-size:16px;font-weight:700;color:var(--muted);line-height:1.5}
+.weak b{color:#ffb3b3}
+.weak em{font-style:normal;color:#d7def0}
+
+/* ===========================================
+   COMPARE — 多要素認証 と 二段階認証
+   =========================================== */
+.cmp{position:absolute;top:626px;width:860px;height:310px;border-radius:18px;background:var(--panel);border:2px solid var(--bd);padding:16px 22px}
+.cmp.mfa{left:90px;--bd:rgba(46,230,168,.55)}
+.cmp.two{left:970px;--bd:#3a4560}
+.cmp-h{display:flex;align-items:baseline;gap:14px}
+.cmp-h b{font-size:28px;font-weight:900}
+.cmp.mfa .cmp-h b{color:var(--ok)}
+.cmp-h span{font-size:16.5px;font-weight:700;color:var(--muted)}
+.flow{display:flex;align-items:center;gap:12px;margin:18px 0 18px}
+.stp{flex:1;height:126px;border-radius:14px;background:#0c1220;border:2px solid #26324c;padding:10px 14px;display:flex;flex-direction:column;gap:6px;position:relative;transition:all .35s}
+.stp .no{font-size:14px;font-weight:900;color:var(--muted)}
+.stp .nm{font-size:19px;font-weight:900}
+.stp .inp{height:36px;border-radius:8px;background:#070b13;border:1.5px solid #2a3858;font-family:var(--font-code);font-size:18px;font-weight:700;display:flex;align-items:center;padding:0 12px;letter-spacing:.12em;color:#fff;overflow:hidden;white-space:nowrap}
+.stp .ft{position:absolute;right:10px;top:10px;font-size:13.5px;font-weight:900;color:#0a0e16;background:var(--k);border-radius:6px;padding:2px 9px}
+.stp.on{border-color:var(--k);background:color-mix(in srgb,var(--k) 10%,#0c1220);box-shadow:0 0 22px color-mix(in srgb,var(--k) 25%,transparent)}
+.stp.done .no::after{content:' ✔';color:var(--ok)}
+.arr{flex:none;font-size:22px;color:#3d4a68}
+.res{flex:none;width:150px;height:126px;border-radius:14px;border:2px dashed #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:17px;font-weight:900;color:#4d5a77;transition:all .35s}
+.res .ic{font-size:30px;line-height:1}
+.res.on{border-style:solid;border-color:var(--ok);color:var(--ok);background:rgba(46,230,168,.08)}
+.verdict{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 16px;font-size:16.5px;font-weight:700;white-space:nowrap}
+.verdict b{font-size:18px;font-weight:900}
+.cmp.mfa .verdict{background:#0b1a16;border:1.5px solid rgba(46,230,168,.4)}
+.cmp.mfa .verdict b{color:var(--ok)}
+.cmp.two .verdict{background:#1c1a0c;border:1.5px solid rgba(244,208,63,.4)}
+.cmp.two .verdict b{color:var(--warn)}
+.cnt{margin-left:auto;display:flex;gap:6px;align-items:center;font-size:14.5px;color:var(--muted);font-weight:900}
+.cnt i{font-style:normal;font-size:13px;font-weight:900;color:#0a0e16;background:var(--k);border-radius:5px;padding:2px 7px}
+
+/* ===========================================
+   POINT — まとめ
+   =========================================== */
+.point{position:absolute;left:90px;right:90px;top:976px;height:68px;border-radius:16px;background:#141a26;border:1.5px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 24px}
+.point .lb{flex:none;font-size:16px;font-weight:900;color:#1a1205;background:var(--accent);border-radius:7px;padding:4px 12px}
+.point p{font-size:20px;font-weight:700;line-height:1.4}
+.point p b{color:var(--accent)}
+.point small{margin-left:auto;font-size:14px;color:var(--muted);font-weight:700;max-width:520px;line-height:1.45}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1205}
+body.editing [data-edit]{outline:1.5px dashed rgba(255,181,71,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>AUTHENTICATION <span>／ ログインのしくみの基本</span></div>
+      <h1 class="title" data-edit><em>認証</em>ってなに？ 本人確認の3つの要素</h1>
+    </div>
+    <button class="btn" id="btnPlay">⏸ 一時停止</button>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">認証 ＝</span></div>
+    <div class="hero-msg" data-edit><mark>「あなたは本当に本人ですか？」</mark>をシステムが確かめること<small>ログイン画面でパスワードを入れるのが、いちばん身近な認証</small></div>
+    <div class="vs" data-edit>似た言葉に注意<br><b>認証</b>＝だれなのかを確かめる<br><b>認可</b>＝何をしてよいかを決める</div>
+  </div>
+
+  <!-- === FACTORS === -->
+  <div class="sec-t reveal d3" style="top:302px"><i>1</i><b>認証に使える3つの情報（認証の3要素）</b></div>
+  <div class="factors reveal d3">
+    <div class="fc" id="fKnow" style="--k:var(--know)">
+      <div class="fc-h"><span class="ic">🧠</span><div><b>知識情報</b><small>本人が「知っている」もの</small></div><span class="en">Something<br>you know</span></div>
+      <div class="chips"><span>パスワード</span><span>暗証番号（PIN）</span><span>秘密の質問</span></div>
+      <div class="weak" data-edit><b>弱点：</b><em>のぞき見・使い回し・推測</em>で、他人に知られると突破される</div>
+    </div>
+    <div class="fc" id="fHave" style="--k:var(--have)">
+      <div class="fc-h"><span class="ic">📱</span><div><b>所持情報</b><small>本人が「持っている」もの</small></div><span class="en">Something<br>you have</span></div>
+      <div class="chips"><span>スマートフォン</span><span>ICカード</span><span>セキュリティトークン</span></div>
+      <div class="weak" data-edit><b>弱点：</b><em>なくす・盗まれる</em>と使えない／使われてしまう</div>
+    </div>
+    <div class="fc" id="fBio" style="--k:var(--bio)">
+      <div class="fc-h"><span class="ic">🫆</span><div><b>生体情報</b><small>本人の「体の特徴」</small></div><span class="en">Something<br>you are</span></div>
+      <div class="chips"><span>指紋</span><span>顔</span><span>静脈・虹彩</span></div>
+      <div class="weak" data-edit><b>弱点：</b>もし情報が漏れても、<em>パスワードのように変更できない</em></div>
+    </div>
+  </div>
+
+  <!-- === COMPARE === -->
+  <div class="sec-t reveal d4" style="top:588px"><i>2</i><b>多要素認証 と 二段階認証 のちがい</b></div>
+
+  <div class="cmp mfa reveal d4">
+    <div class="cmp-h"><b>多要素認証（二要素認証）</b><span data-edit>ちがう種類の要素を2つ以上組み合わせる</span></div>
+    <div class="flow">
+      <div class="stp" id="m1" style="--k:var(--know)"><span class="ft">知識</span><span class="no">ステップ1</span><span class="nm">パスワード</span><span class="inp" id="m1i"></span></div>
+      <span class="arr">▶</span>
+      <div class="stp" id="m2" style="--k:var(--have)"><span class="ft">所持</span><span class="no">ステップ2</span><span class="nm">スマホに届いたコード</span><span class="inp" id="m2i"></span></div>
+      <span class="arr">▶</span>
+      <div class="res" id="mR"><span class="ic">🔓</span>ログイン</div>
+    </div>
+    <div class="verdict"><b>✔ 安全性が高い</b><span data-edit>パスワードが盗まれても、スマホがないと入れない</span>
+      <span class="cnt"><i style="--k:var(--know)">知識</i>＋<i style="--k:var(--have)">所持</i>＝2種類</span></div>
+  </div>
+
+  <div class="cmp two reveal d4">
+    <div class="cmp-h"><b>二段階認証</b><span data-edit>確認の「段階」を2回に分ける（要素の種類は問わない）</span></div>
+    <div class="flow">
+      <div class="stp" id="t1" style="--k:var(--know)"><span class="ft">知識</span><span class="no">ステップ1</span><span class="nm">パスワード</span><span class="inp" id="t1i"></span></div>
+      <span class="arr">▶</span>
+      <div class="stp" id="t2" style="--k:var(--know)"><span class="ft">知識</span><span class="no">ステップ2</span><span class="nm">秘密の質問</span><span class="inp" id="t2i" style="font-family:var(--font-body);font-size:16px;letter-spacing:0"></span></div>
+      <span class="arr">▶</span>
+      <div class="res" id="tR"><span class="ic">🔓</span>ログイン</div>
+    </div>
+    <div class="verdict"><b>△ 段階は2つ</b><span data-edit>要素は「知識」1種類だけ。まとめて盗まれる心配</span>
+      <span class="cnt"><i style="--k:var(--know)">知識</i>のみ＝1種類</span></div>
+  </div>
+
+  <!-- === POINT === -->
+  <div class="point reveal d4">
+    <span class="lb">ポイント</span>
+    <p data-edit>大事なのは<b>「段階の数」より「要素の種類」</b>。ちがう種類を組み合わせるほど安全！</p>
+    <small data-edit>※サービスによっては、スマホのコードを使う「二段階認証」もあり、その場合は多要素認証にもなっています</small>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   ANIMATION — 2つのログインの流れを同時に再生
+   段階ごとに、使った要素のカード（上段）も光らせる
+   =========================================== */
+let token = 0, playing = true;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('stop'), ms));
+const FACTOR = { know:'fKnow', have:'fHave', bio:'fBio' };
+function lightFactors(list){ Object.values(FACTOR).forEach(id => $(id).classList.toggle('act', list.includes(id))); }
+async function typeInto(id, text, t, ms=110){ $(id).textContent = ''; for (const ch of text){ $(id).textContent += ch; await sleep(ms, t); } }
+function reset(){
+  ['m1','m2','t1','t2'].forEach(id => { $(id).classList.remove('on','done'); $(id + 'i').textContent = ''; });
+  ['mR','tR'].forEach(id => $(id).classList.remove('on'));
+  lightFactors([]);
+}
+async function loop(){
+  const t = ++token;
+  try{
+    while (true){
+      reset(); await sleep(900, t);
+      // ステップ1：どちらもパスワード（知識）
+      $('m1').classList.add('on'); $('t1').classList.add('on'); lightFactors(['fKnow']);
+      await Promise.all([typeInto('m1i', '••••••••', t), typeInto('t1i', '••••••••', t)]);
+      await sleep(500, t);
+      $('m1').classList.replace('on','done'); $('t1').classList.replace('on','done');
+      // ステップ2：多要素＝スマホのコード（所持）／二段階＝秘密の質問（知識）
+      $('m2').classList.add('on'); $('t2').classList.add('on'); lightFactors(['fHave','fKnow']);
+      await Promise.all([typeInto('m2i', '482 913', t, 140), typeInto('t2i', '初めて飼ったペットは？ → ポチ', t, 70)]);
+      await sleep(600, t);
+      $('m2').classList.replace('on','done'); $('t2').classList.replace('on','done');
+      $('mR').classList.add('on'); $('tR').classList.add('on'); lightFactors([]);
+      await sleep(3200, t);
+    }
+  }catch(e){ /* 停止 */ }
+}
+function setPlaying(v){
+  playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v) loop(); else token++;
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .chips span').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'authentication.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+setTimeout(loop, 900);
+</script>
+</body>
+</html>

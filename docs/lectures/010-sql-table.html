@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQLとテーブルってなに？ DDL・DML・DCL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#ffb547;
+  --ddl:#5aa2ff;   /* DDL：定義 */
+  --dml:#2ee6a8;   /* DML：操作 */
+  --dcl:#ff7ab6;   /* DCL：権限 */
+  --req:#4fe3f0;
+  --res:#b9a3ff;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 400px at 360px 560px, rgba(79,227,240,.06), transparent 70%),
+    radial-gradient(700px 420px at 1340px 560px, rgba(46,230,168,.06), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:64px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — SQL と テーブル をひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:180px;height:118px;display:flex;gap:18px}
+.def{border-radius:18px;display:flex;align-items:center;gap:22px;padding:0 28px}
+.def.sql{flex:1.25;background:linear-gradient(90deg,#221a0c,#121827 70%);border:2px solid rgba(255,181,71,.6)}
+.def.tbl{flex:1;background:#101826;border:1.5px solid var(--line)}
+.def .l{flex:none;display:flex;flex-direction:column;gap:6px}
+.def .lb{font-size:16px;font-weight:900;color:#1a1205;background:var(--accent);border-radius:7px;padding:3px 10px;align-self:flex-start}
+.def.tbl .lb{background:#3a4766;color:#eef3ff}
+.def .eq{font-family:var(--font-display);font-size:34px;color:var(--accent);line-height:1}
+.def.tbl .eq{color:#eef3ff}
+.def p{font-size:26px;font-weight:900;line-height:1.42}
+.def p mark{background:linear-gradient(transparent 62%,rgba(255,181,71,.42) 62%);color:#fff;padding:0 2px}
+.def p small{display:block;font-size:17px;color:var(--muted);font-weight:700}
+
+/* ===========================================
+   SQL CLIENT — 命令を書いて送る側
+   =========================================== */
+.client{position:absolute;left:90px;top:322px;width:560px;height:472px;border-radius:18px;background:var(--panel);border:2px solid #2a3958;overflow:hidden}
+.c-top{height:44px;white-space:nowrap;display:flex;align-items:center;gap:10px;padding:0 16px;background:#0c1220;border-bottom:1px solid #1e2a42}
+.c-top b{font-size:20px;font-weight:900;color:var(--req)}
+.c-top span{font-size:14.5px;color:var(--muted);font-weight:700}
+.c-conn{height:34px;white-space:nowrap;display:flex;align-items:center;gap:16px;padding:0 16px;font-size:14.5px;color:var(--muted);font-weight:700;border-bottom:1px solid #1e2a42}
+.c-conn code{font-family:var(--font-code);color:#c9d4ee}
+.c-conn .ok{margin-left:auto;color:#3ddc97}
+.term{padding:12px 16px;font-family:var(--font-code);font-size:17px;line-height:1.5;color:#d7def0;white-space:pre-wrap}
+.term .pr{color:var(--req)}
+.term .kw{font-weight:700}
+.term .out{color:#a8f0cf}
+.term .cm{color:#64708c;font-family:var(--font-body);font-weight:700}
+.caret{display:inline-block;width:10px;height:19px;background:#fff;vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.rtable{border-collapse:collapse;margin-top:4px;font-size:16px}
+.rtable td,.rtable th{border:1px solid #2f3d5c;padding:3px 12px;text-align:left}
+.rtable th{color:var(--req)}
+
+/* ===========================================
+   CHANNEL — クライアント ⇄ DBサーバ の通信
+   =========================================== */
+.ch-lb{position:absolute;left:650px;width:210px;text-align:center;font-size:15px;font-weight:900;color:var(--muted)}
+.lane{position:absolute;left:662px;width:186px;height:4px;opacity:.45}
+.lane.rq{top:500px;background:repeating-linear-gradient(90deg,var(--req) 0 12px,transparent 12px 22px)}
+.lane.rs{top:650px;background:repeating-linear-gradient(90deg,var(--res) 0 12px,transparent 12px 22px)}
+.lane.rq::after,.lane.rs::after{position:absolute;top:-10px;font-size:18px;line-height:1}
+.lane.rq::after{content:'▶';right:-6px;color:var(--req)}
+.lane.rs::after{content:'◀';left:-6px;color:var(--res)}
+.pkt{position:absolute;z-index:10;white-space:nowrap;font-family:var(--font-code);font-weight:700;font-size:16px;padding:8px 14px;border-radius:999px;pointer-events:none;will-change:transform}
+.pkt.rq{background:#07161a;border:2px solid var(--req);color:var(--req);box-shadow:0 0 22px rgba(79,227,240,.45)}
+.pkt.rs{background:#140f24;border:2px solid var(--res);color:#e2d8ff;border-radius:10px;box-shadow:0 0 22px rgba(185,163,255,.45)}
+.pkt small{display:block;font-family:var(--font-body);font-size:12.5px;font-weight:900;opacity:.85}
+
+/* ===========================================
+   DB SERVER — テーブルと権限
+   =========================================== */
+.db{position:absolute;left:860px;top:322px;width:970px;height:472px;border-radius:18px;background:var(--panel);border:2px solid #34305a;padding:16px 22px}
+.db-h{display:flex;align-items:center;gap:14px}
+.db-h .cy{font-size:34px;line-height:1}
+.db-h b{font-size:26px;font-weight:900;color:var(--res)}
+.db-h span{font-size:15px;color:var(--muted);font-weight:700}
+.exec{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;color:var(--muted);padding:5px 14px;border-radius:999px;border:1.5px solid #2a3858;transition:all .3s}
+.exec i{width:10px;height:10px;border-radius:50%;background:#34415f}
+.exec.on{color:var(--k);border-color:var(--k)}
+.exec.on i{background:var(--k);box-shadow:0 0 10px var(--k);animation:pulse .8s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.dbname{margin:10px 0 8px;font-size:15px;font-weight:700;color:var(--muted)}
+.dbname code{font-family:var(--font-code);color:#e2d8ff}
+
+.tarea{position:absolute;left:22px;top:110px;width:600px;height:340px}
+.tname{font-family:var(--font-code);font-size:18px;font-weight:700;color:var(--ddl);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.tname small{font-family:var(--font-body);font-size:14px;color:var(--muted);font-weight:700}
+.empty{height:200px;border-radius:12px;border:2px dashed #2a3858;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#4d5a77}
+.grid{border-radius:10px;overflow:hidden;border:1.5px solid #2f3d5c;display:inline-block}
+.tr{display:flex;height:50px;transition:background .4s,opacity .45s,transform .45s var(--ease)}
+.tr+.tr{border-top:1px solid #22304a}
+.td{display:flex;align-items:center;padding:0 14px;font-size:19px;font-weight:700;border-left:1px solid #22304a;transition:background .4s,color .4s}
+.td:first-child{border-left:none}
+.th .td{background:#122036;color:var(--ddl);font-family:var(--font-code);font-size:16px;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1.2}
+.th .td small{font-size:12px;color:var(--muted)}
+.c0{width:70px}.c1{width:210px}.c2{width:130px}.c3{width:130px}
+.td.num{justify-content:flex-end}
+.th .td.num{align-items:flex-end}
+.td.pop{animation:colIn .6s var(--ease)}
+@keyframes colIn{from{opacity:0;transform:translateY(-10px)}}
+.tr.new{animation:rowIn .55s var(--ease) both;background:rgba(46,230,168,.18)}
+@keyframes rowIn{from{opacity:0;transform:translateX(30px)}}
+.tr.sel{background:rgba(79,227,240,.2)}
+.tr.dim{opacity:.35}
+.td.upd{background:rgba(244,208,63,.35);color:#fff}
+.tr.del{background:rgba(255,107,107,.35);opacity:0;transform:translateX(-30px)}
+.anno{margin-top:12px;font-size:15.5px;font-weight:700;color:var(--muted);line-height:1.6}
+.anno b{color:#e2d8ff}
+
+.perm{position:absolute;right:22px;top:110px;width:300px;height:340px;border-radius:14px;background:#0c1220;border:1.5px solid #2a3858;padding:14px 16px;transition:border-color .3s}
+.perm.act{border-color:var(--dcl)}
+.perm h4{font-size:18px;font-weight:900;color:var(--dcl);margin-bottom:4px}
+.perm .ps{font-size:14px;color:var(--muted);font-weight:700;margin-bottom:12px}
+.user{border-radius:12px;background:#111827;border:1.5px solid #26324c;padding:10px 14px;margin-bottom:10px}
+.user b{font-size:19px;font-weight:900;display:flex;align-items:center;gap:8px}
+.user b code{font-family:var(--font-code);font-size:17px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;min-height:28px}
+.bdg{font-family:var(--font-code);font-size:13.5px;font-weight:700;padding:3px 9px;border-radius:6px;background:rgba(255,122,182,.16);color:#ffc2dc;border:1px solid rgba(255,122,182,.4);transition:all .4s var(--ease)}
+.bdg.in{animation:bdgIn .5s var(--ease)}
+@keyframes bdgIn{from{opacity:0;transform:scale(.4)}}
+.bdg.out{opacity:0;transform:scale(.4)}
+.none{font-size:14px;color:#5c6884;font-weight:700}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:812px;height:84px;border-radius:16px;background:linear-gradient(90deg,#141a26,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:20px;padding:0 26px}
+.cap-k{flex:none;font-family:var(--font-display);font-size:24px;color:#0a0e16;background:var(--k);border-radius:10px;padding:6px 14px;transition:background .3s}
+.cap-cmd{flex:none;font-family:var(--font-code);font-weight:700;font-size:24px;color:var(--k);transition:color .3s}
+.cap-tx{font-size:23px;font-weight:700;line-height:1.4;transition:opacity .25s}
+.cap-tx b{color:var(--accent);font-weight:900}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   CATEGORY CARDS — DDL / DML / DCL（コマンドをクリックで実行）
+   =========================================== */
+.cats{position:absolute;left:90px;right:90px;top:910px;height:136px;display:flex;gap:18px}
+.cat{flex:1;border-radius:16px;background:var(--panel);border:2px solid color-mix(in srgb,var(--k) 35%,#1f2a40);padding:12px 18px;transition:border-color .35s,box-shadow .35s}
+.cat.dml{flex:1.25}
+.cat.act{border-color:var(--k);box-shadow:0 0 0 5px color-mix(in srgb,var(--k) 16%,transparent)}
+.cat-h{display:flex;align-items:baseline;gap:12px}
+.cat-h b{font-family:var(--font-display);font-size:30px;color:var(--k);line-height:1}
+.cat-h span{font-size:14px;color:var(--muted);font-family:var(--font-code)}
+.cat-h em{font-style:normal;font-size:19px;font-weight:900;margin-left:auto}
+.cat p{font-size:16.5px;font-weight:700;color:#c9d4ee;margin:5px 0 9px}
+.cmds{display:flex;gap:8px}
+.cmd{font-family:var(--font-code);font-size:16px;font-weight:700;padding:5px 12px;border-radius:8px;background:#0c1220;border:1.5px solid #2a3858;color:#c9d4ee;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .25s}
+.cmd:hover{border-color:var(--k)}
+.cmd small{font-family:var(--font-body);font-size:12.5px;color:var(--muted);font-weight:700}
+.cmd.now{background:var(--k);border-color:var(--k);color:#0a0e16}
+.cmd.now small{color:#0a0e16}
+.cmd.done{border-color:color-mix(in srgb,var(--k) 60%,#2a3858)}
+.cmd.off{cursor:default;opacity:.45}
+.crud{font-family:var(--font-display);font-size:12px;padding:1px 5px;border-radius:4px;background:#1b2538;color:var(--dml)}
+.cmd.now .crud{background:#0a0e16}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1205}
+body.editing [data-edit]{outline:1.5px dashed rgba(255,181,71,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>SQL &amp; TABLE <span>／ データベースと話すための言葉</span></div>
+      <h1 class="title" data-edit><em>SQL</em>とテーブルってなに？</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="def sql">
+      <div class="l"><span class="lb">ひとことで言うと</span><span class="eq">SQL ＝</span></div>
+      <p data-edit>データベースに<mark>「こうして」とお願いする専用の言葉</mark><small>英語に近い決まった書き方で、作る・入れる・探す・消す などを命令する</small></p>
+    </div>
+    <div class="def tbl">
+      <div class="l"><span class="lb">そもそも</span><span class="eq">テーブル ＝</span></div>
+      <p data-edit>データを<mark>行と列</mark>で整理した表<small>Excelのシートのようなもの。DBの中にいくつも作れる</small></p>
+    </div>
+  </div>
+
+  <!-- === SQL CLIENT === -->
+  <div class="client reveal d3">
+    <div class="c-top"><b>💻 SQLクライアント</b><span data-edit>SQLを書いて送るソフト（例：psql・Workbench）</span></div>
+    <div class="c-conn"><span>接続先 <code>db.example.com:3306</code></span><span>ユーザー <code>admin</code></span><span class="ok">● 接続中</span></div>
+    <div class="term" id="term"></div>
+  </div>
+
+  <!-- === CHANNEL === -->
+  <div class="ch-lb reveal d3" style="top:410px">ネットワーク<br>（ログインして接続）</div>
+  <div class="ch-lb reveal d3" style="top:466px;color:var(--req)">SQL文を送る</div>
+  <div class="lane rq reveal d3"></div>
+  <div class="lane rs reveal d3"></div>
+  <div class="ch-lb reveal d3" style="top:664px;color:var(--res)">結果を返す</div>
+
+  <!-- === DB SERVER === -->
+  <div class="db reveal d3" id="db">
+    <div class="db-h"><span class="cy">🛢️</span><b>DBサーバ</b><span data-edit>SQLを受け取って実行する（例：MySQL・PostgreSQL）</span><span class="exec" id="exec"><i></i><span>待機中</span></span></div>
+    <div class="dbname">データベース <code>shop</code> の中</div>
+    <div class="tarea">
+      <div class="tname">📋 テーブル <span id="tn">products</span><small>（商品の表）</small></div>
+      <div id="tbox"></div>
+      <div class="anno" id="anno"><b>横1行</b>＝1件のデータ（行・レコード）／<b>縦1列</b>＝項目（列・カラム）</div>
+    </div>
+    <div class="perm" id="perm">
+      <h4>🔐 ユーザーと権限</h4>
+      <div class="ps">だれが、どのテーブルに何をしてよいか</div>
+      <div class="user"><b>👑 <code>admin</code></b><div class="badges"><span class="bdg">すべてOK</span></div></div>
+      <div class="user"><b>👤 <code>tanaka</code></b><div class="badges" id="tanaka"></div></div>
+    </div>
+  </div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4" id="caption">
+    <span class="cap-k" id="capK">DDL</span>
+    <span class="cap-cmd" id="capCmd"></span>
+    <span class="cap-tx" id="capTx"></span>
+  </div>
+
+  <!-- === CATEGORY CARDS === -->
+  <div class="cats reveal d4">
+    <div class="cat ddl" id="catDDL" style="--k:var(--ddl)">
+      <div class="cat-h"><b>DDL</b><span>Data Definition Language</span><em>定義する</em></div>
+      <p data-edit>テーブル（<b style="color:var(--ddl)">入れ物</b>）を作る・変える・消す</p>
+      <div class="cmds"><span class="cmd" data-s="0">CREATE<small>作る</small></span><span class="cmd" data-s="1">ALTER<small>変える</small></span><span class="cmd off" title="このデモでは実行しません">DROP<small>消す</small></span></div>
+    </div>
+    <div class="cat dml" id="catDML" style="--k:var(--dml)">
+      <div class="cat-h"><b>DML</b><span>Data Manipulation Language</span><em>操作する</em></div>
+      <p data-edit>テーブルの<b style="color:var(--dml)">中身（データ）</b>を入れる・探す・直す・消す</p>
+      <div class="cmds"><span class="cmd" data-s="2"><span class="crud">C</span>INSERT</span><span class="cmd" data-s="3"><span class="crud">R</span>SELECT</span><span class="cmd" data-s="4"><span class="crud">U</span>UPDATE</span><span class="cmd" data-s="5"><span class="crud">D</span>DELETE</span></div>
+    </div>
+    <div class="cat dcl" id="catDCL" style="--k:var(--dcl)">
+      <div class="cat-h"><b>DCL</b><span>Data Control Language</span><em>管理する</em></div>
+      <p data-edit>だれが何をしてよいか（<b style="color:var(--dcl)">権限</b>）を決める</p>
+      <div class="cmds"><span class="cmd" data-s="6">GRANT<small>与える</small></span><span class="cmd" data-s="7">REVOKE<small>取り消す</small></span></div>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+let token = 0, playing = true, current = 0;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('cancel'), ms));
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ===========================================
+   TABLE STATE — 「k番目まで実行した」ときのテーブルの姿
+   =========================================== */
+const COLS = [
+  { key:'id', ja:'商品ID', type:'INT', cls:'c0 num' },
+  { key:'name', ja:'商品名', type:'VARCHAR(50)', cls:'c1' },
+  { key:'price', ja:'価格', type:'INT', cls:'c2 num' },
+  { key:'stock', ja:'在庫数', type:'INT', cls:'c3 num' }
+];
+const ROWS = [ [1,'傘',550,10], [2,'長靴',2980,5], [3,'レインコート',1980,8] ];
+function stateAt(k){
+  if (k < 0) return null;
+  const ncol = k >= 1 ? 4 : 3;
+  let rows = k >= 2 ? ROWS.map(r => r.slice()) : [];
+  if (k >= 4) rows[0][2] = 500;
+  if (k >= 5) rows = rows.filter(r => r[0] !== 2);
+  return { ncol, rows };
+}
+/* テーブルを描く。fx で演出（新しい列・新しい行など）を指定 */
+function drawTable(k, fx = {}){
+  const st = stateAt(k), box = $('tbox');
+  if (!st){ box.innerHTML = '<div class="empty">まだテーブルはありません</div>'; return; }
+  let h = '<div class="grid"><div class="tr th">';
+  COLS.slice(0, st.ncol).forEach((c, i) => {
+    h += `<div class="td ${c.cls}${fx.newCol === i || fx.allCols ? ' pop' : ''}">${c.key}<small>${c.type}</small></div>`;
+  });
+  h += '</div>';
+  if (!st.rows.length) h += `<div class="tr"><div class="td" style="width:${st.ncol===4?540:410}px;color:#4d5a77;font-size:16px">（行はまだ0件 ＝ 中身は空っぽ）</div></div>`;
+  st.rows.forEach((r, ri) => {
+    const cls = ['tr'];
+    if (fx.newRows) cls.push('new');
+    if (fx.sel) cls.push(fx.sel.includes(r[0]) ? 'sel' : 'dim');
+    h += `<div class="${cls.join(' ')}" data-id="${r[0]}" style="${fx.newRows ? `animation-delay:${ri*0.25}s` : ''}">`;
+    COLS.slice(0, st.ncol).forEach((c, ci) => {
+      const v = c.key === 'price' || c.key === 'stock' ? r[ci].toLocaleString() : r[ci];
+      h += `<div class="td ${c.cls}">${esc(String(v))}</div>`;
+    });
+    h += '</div>';
+  });
+  box.innerHTML = h + '</div>';
+}
+function drawPerm(k, fx){
+  const has = k === 6;
+  $('tanaka').innerHTML = has ? `<span class="bdg${fx === 'in' ? ' in' : ''}">products を SELECT</span>` : '<span class="none">（権限なし：何もできない）</span>';
+}
+
+/* ===========================================
+   TERMINAL / PACKET
+   =========================================== */
+const PROMPT = '<span class="pr">mysql&gt;</span> ';
+function hiSQL(s){ return esc(s).replace(/\b(CREATE|TABLE|ALTER|ADD|INSERT|INTO|VALUES|SELECT|FROM|WHERE|UPDATE|SET|DELETE|GRANT|REVOKE|ON|TO|INT|VARCHAR|PRIMARY|KEY)\b/g, '<span class="kw" style="color:var(--k)">$1</span>'); }
+function termShow(sql, outHTML){ $('term').innerHTML = PROMPT + hiSQL(sql) + (outHTML ? '\n' + outHTML : ''); }
+async function typeSQL(sql, t){
+  for (let i = 0; i <= sql.length; i += 2){
+    $('term').innerHTML = PROMPT + hiSQL(sql.slice(0, i)) + '<span class="caret"></span>';
+    await sleep(28, t);
+  }
+  termShow(sql); await sleep(300, t);
+}
+function packet(dir, html, t){
+  if (t !== token) return Promise.reject('cancel');
+  const el = document.createElement('div');
+  el.className = 'pkt ' + (dir > 0 ? 'rq' : 'rs'); el.innerHTML = html;
+  el.style.left = '755px'; el.style.top = (dir > 0 ? 502 : 652) + 'px';
+  $('slide').appendChild(el);
+  const d = 150;
+  const a = el.animate([
+    { transform:`translate(-50%,-50%) translateX(${-d*dir}px) scale(.7)`, opacity:0 },
+    { transform:`translate(-50%,-50%) translateX(${-d*dir*.6}px) scale(1)`, opacity:1, offset:.15 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir*.6}px) scale(1)`, opacity:1, offset:.85 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir}px) scale(.7)`, opacity:0 }
+  ], { duration:1500, easing:'cubic-bezier(.45,0,.25,1)', fill:'forwards' });
+  return a.finished.then(() => { el.remove(); if (t !== token) throw 'cancel'; });
+}
+function execOn(on, text){ const e = $('exec'); e.classList.toggle('on', on); e.lastElementChild.textContent = text; }
+
+/* ===========================================
+   STEPS — 8つのSQL（文言・SQLはここで編集）
+   =========================================== */
+const K = { DDL:'var(--ddl)', DML:'var(--dml)', DCL:'var(--dcl)' };
+const out = (s, cm) => `<span class="out">${s}</span>` + (cm ? `  <span class="cm">${cm}</span>` : '');
+const STEPS = [
+  { cat:'DDL', cmd:'CREATE', sql:'CREATE TABLE products (\n  id INT PRIMARY KEY,\n  name VARCHAR(50),\n  price INT\n);',
+    req:'CREATE TABLE', res:'OK<small>テーブルを作成</small>',
+    out: out('Query OK, 0 rows affected', '← 入れ物ができた'),
+    cap:'「products」という<b>テーブル（入れ物）</b>を作成。列の名前と<b>データの型</b>を決めるだけで、中身はまだ空っぽです。',
+    fx:{ allCols:true } },
+  { cat:'DDL', cmd:'ALTER', sql:'ALTER TABLE products\n  ADD stock INT;',
+    req:'ALTER TABLE', res:'OK<small>列を追加</small>',
+    out: out('Query OK, 0 rows affected', '← 列が増えた'),
+    cap:'テーブルの<b>形を変更</b>します。ここでは「在庫数（stock）」の<b>列を追加</b>。',
+    fx:{ newCol:3 } },
+  { cat:'DML', cmd:'INSERT', sql:"INSERT INTO products VALUES\n  (1, '傘', 550, 10),\n  (2, '長靴', 2980, 5),\n  (3, 'レインコート', 1980, 8);",
+    req:'INSERT', res:'3 rows<small>3件追加</small>',
+    out: out('Query OK, 3 rows affected', '← 3件入った'),
+    cap:'テーブルに<b>データ（行）を追加</b>します。CRUDの <b>C（作成）</b> にあたります。',
+    fx:{ newRows:true } },
+  { cat:'DML', cmd:'SELECT', sql:'SELECT name, price FROM products\n  WHERE price < 2000;',
+    req:'SELECT', res:'2 rows<small>結果の表</small>',
+    out: '<table class="rtable"><tr><th>name</th><th>price</th></tr><tr><td>傘</td><td>550</td></tr><tr><td>レインコート</td><td>1980</td></tr></table>' + out('2 rows in set', '← 結果が届いた'),
+    cap:'条件（価格が2000円未満）に合うデータを<b>探して取り出す</b>。結果の表がクライアントに返ります。CRUDの <b>R（読み取り）</b>。',
+    fx:{ sel:[1,3] } },
+  { cat:'DML', cmd:'UPDATE', sql:'UPDATE products SET price = 500\n  WHERE id = 1;',
+    req:'UPDATE', res:'1 row<small>1件更新</small>',
+    out: out('Query OK, 1 row affected', '← 1件書き換えた'),
+    cap:'傘の価格を 550 → 500 に<b>書き換え</b>。CRUDの <b>U（更新）</b>。<b>WHERE</b> を忘れると全部の行が変わるので要注意！',
+    fx:{ upd:1 } },
+  { cat:'DML', cmd:'DELETE', sql:'DELETE FROM products\n  WHERE id = 2;',
+    req:'DELETE', res:'1 row<small>1件削除</small>',
+    out: out('Query OK, 1 row affected', '← 1件消した'),
+    cap:'商品ID 2（長靴）の行を<b>削除</b>します。CRUDの <b>D（削除）</b>。消した行は元に戻せません。',
+    fx:{ del:2 } },
+  { cat:'DCL', cmd:'GRANT', sql:'GRANT SELECT ON products\n  TO tanaka;',
+    req:'GRANT', res:'OK<small>権限を付与</small>',
+    out: out('Query OK, 0 rows affected', '← tanaka が見られるように'),
+    cap:'ユーザー tanaka に「products を<b>見てよい（SELECT）</b>」という<b>権限を与え</b>ます。',
+    fx:{ perm:'in' } },
+  { cat:'DCL', cmd:'REVOKE', sql:'REVOKE SELECT ON products\n  FROM tanaka;',
+    req:'REVOKE', res:'OK<small>権限を取消</small>',
+    out: out('Query OK, 0 rows affected', '← 見られなくなった'),
+    cap:'tanaka の権限を<b>取り消し</b>ます。だれが何をしてよいかを管理し、データを守るのが <b>DCL</b> です。',
+    fx:{ perm:'out' } }
+];
+
+/* カテゴリのコマンドをクリック → その場面へ */
+document.querySelectorAll('.cmd[data-s]').forEach(c => c.onclick = () => jump(+c.dataset.s));
+
+/* 場面ごとの見た目（カテゴリ強調・説明） */
+function setStep(i){
+  current = i; const s = STEPS[i], k = K[s.cat];
+  document.documentElement.style.setProperty('--k', k);
+  $('caption').style.setProperty('--k', k);
+  $('capK').textContent = s.cat; $('capCmd').textContent = s.cmd;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { tx.innerHTML = s.cap; tx.classList.remove('fade'); }, 180);
+  ['DDL','DML','DCL'].forEach(c => $('cat' + c).classList.toggle('act', c === s.cat));
+  document.querySelectorAll('.cmd[data-s]').forEach(c => {
+    const j = +c.dataset.s; c.classList.toggle('now', j === i); c.classList.toggle('done', j < i);
+  });
+  $('perm').classList.toggle('act', s.cat === 'DCL');
+  $('term').style.setProperty('--k', k);
+}
+/* k番目まで終わった状態を描く（停止・ジャンプ用） */
+function render(k){
+  drawTable(k); drawPerm(k);
+  if (k < 0) $('term').innerHTML = PROMPT + '<span class="caret"></span>';
+  else termShow(STEPS[k].sql, STEPS[k].out);
+  execOn(false, '待機中');
+}
+const clearPkts = () => document.querySelectorAll('.pkt').forEach(e => e.remove());
+
+/* 1つの場面を実行：入力 → 送信 → 実行 → 返信 */
+async function runStep(i, t){
+  const s = STEPS[i];
+  await typeSQL(s.sql, t);
+  await packet(1, `${s.req}<small>SQL文を送信</small>`, t);
+  execOn(true, '実行中…'); await sleep(500, t);
+  // DBの中で起きること
+  if (s.fx.upd){
+    drawTable(i - 1);
+    const cell = document.querySelector(`.tr[data-id="${s.fx.upd}"] .c2`);
+    cell.classList.add('upd'); await sleep(500, t);
+    cell.textContent = '500'; await sleep(900, t);
+  } else if (s.fx.del){
+    drawTable(i - 1);
+    document.querySelector(`.tr[data-id="${s.fx.del}"]`).classList.add('del'); await sleep(700, t);
+    drawTable(i);
+  } else if (s.fx.perm){
+    if (s.fx.perm === 'in') drawPerm(i, 'in');
+    else { const b = $('tanaka').querySelector('.bdg'); if (b) b.classList.add('out'); await sleep(450, t); drawPerm(i); }
+    await sleep(600, t);
+  } else {
+    drawTable(i, s.fx); await sleep(s.fx.newRows ? 1100 : 900, t);
+  }
+  execOn(true, '完了');
+  await packet(-1, s.res, t);
+  execOn(false, '待機中');
+  termShow(s.sql, s.out);
+}
+
+/* ===========================================
+   PLAYER — 自動再生（ループ）・一時停止・ジャンプ
+   =========================================== */
+async function play(from, once=false){
+  const t = ++token; clearPkts(); let i = from;
+  try{
+    while (true){
+      setStep(i); render(i - 1);
+      await runStep(i, t);
+      if (once || !playing) return;
+      await sleep(i === STEPS.length - 1 ? 3500 : 2200, t);
+      i = (i + 1) % STEPS.length;
+    }
+  }catch(e){ /* キャンセル */ }
+}
+function setPlaying(v){ playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生'; }
+function togglePlay(){
+  if (playing){ setPlaying(false); token++; clearPkts(); render(current); }
+  else { setPlaying(true); play((current + 1) % STEPS.length); }
+}
+function jump(i){ i = (i + STEPS.length) % STEPS.length; play(i, !playing); }
+$('btnPlay').onclick = togglePlay;
+$('btnReplay').onclick = () => { setPlaying(true); play(0); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); togglePlay(); }
+  if (e.key === 'ArrowRight') jump(current + 1);
+  if (e.key === 'ArrowLeft') jump(current - 1);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit]').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'sql-table.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+render(-1); setStep(0);
+setTimeout(() => play(0), 900);
+</script>
+</body>
+</html>

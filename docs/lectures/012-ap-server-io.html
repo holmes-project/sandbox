@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APサーバの入出力 リクエストとJSONレスポンス</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#f4d03f;    /* APサーバ（主役） */
+  --req:#4fe3f0;       /* リクエスト */
+  --res:#b9a3ff;       /* レスポンス */
+  --host:#9ecbff;      /* URL：サーバの場所 */
+  --path:#2ee6a8;      /* URL：パス */
+  --param:#ff9f5a;     /* URL：パスパラメータ */
+  --query:#ff7ab6;     /* URL：クエリ */
+  --ok:#2ee6a8;
+  --ng:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 420px at 420px 650px, rgba(79,227,240,.05), transparent 70%),
+    radial-gradient(600px 360px at 1500px 480px, rgba(244,208,63,.07), transparent 70%),
+    radial-gradient(600px 300px at 1300px 860px, rgba(185,163,255,.06), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:62px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — APサーバをひとことで
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:178px;height:112px;border-radius:20px;background:linear-gradient(90deg,#211d0a,#121827 60%);border:2px solid rgba(244,208,63,.6);display:flex;align-items:center;padding:0 32px;gap:30px}
+.hero-l{flex:none;display:flex;flex-direction:column;gap:6px}
+.hero-l .lb{font-size:17px;font-weight:900;color:#1a1505;background:var(--accent);border-radius:7px;padding:3px 11px;align-self:flex-start}
+.hero-l .eq{font-family:var(--font-display);font-size:34px;color:var(--accent);line-height:1}
+.hero-msg{flex:1;font-size:29px;font-weight:900;line-height:1.42}
+.hero-msg mark{background:linear-gradient(transparent 62%,rgba(244,208,63,.42) 62%);color:#fff;padding:0 2px}
+.hero-msg .i{color:var(--req)}.hero-msg .o{color:var(--res)}
+.io{flex:none;display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px}
+.io span{border-radius:10px;padding:10px 14px;border:1.5px solid}
+.io .a{color:var(--req);border-color:var(--req);background:#07161a}
+.io .b{color:#1a1505;background:var(--accent);border-color:var(--accent)}
+.io .c{color:var(--res);border-color:var(--res);background:#140f24}
+
+/* ===========================================
+   PANEL 共通
+   =========================================== */
+.panel{position:absolute;border-radius:18px;background:var(--panel);border:1.5px solid var(--line);padding:16px 22px}
+.p-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.p-h .no{width:32px;height:32px;border-radius:50%;background:var(--k);color:#0a0e16;font-family:var(--font-display);font-size:17px;display:flex;align-items:center;justify-content:center}
+.p-h b{font-size:24px;font-weight:900}
+.p-h span{font-size:15.5px;color:var(--muted);font-weight:700}
+
+/* ===========================================
+   ① REQUEST ANATOMY — リクエストの中身
+   =========================================== */
+.rq{left:90px;top:308px;width:700px;height:740px;--k:var(--req)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;border-radius:10px;background:#0c1220;border:1.5px solid #26324c;padding:7px 10px;cursor:pointer;transition:all .25s}
+.tab b{display:block;font-size:17px;font-weight:900}
+.tab small{font-family:var(--font-code);font-size:12.5px;color:var(--muted);font-weight:700}
+.tab:hover{border-color:var(--req)}
+.tab.on{border-color:var(--req);background:#0b1d22}
+.tab.on b{color:var(--req)}
+.sec{border-radius:12px;background:#0b111d;border:1.5px solid #1f2a40;padding:10px 14px;margin-bottom:10px}
+.sec-h{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;color:var(--muted);margin-bottom:6px}
+.sec-h i{font-style:normal;font-size:13px;color:#0a0e16;background:var(--req);border-radius:5px;padding:1px 7px}
+.sec-h em{font-style:normal;margin-left:auto;font-size:13.5px;font-weight:700}
+.fade{transition:opacity .3s}
+.fade.out{opacity:0}
+.reqline{display:flex;align-items:flex-start;gap:10px}
+.method{flex:none;font-family:var(--font-code);font-weight:700;font-size:18px;color:#0a0e16;border-radius:7px;padding:3px 10px;margin-top:2px}
+.m-GET{background:var(--ok)}.m-POST{background:var(--param)}.m-DELETE{background:var(--ng)}
+.url{display:flex;flex-wrap:wrap;align-items:flex-start}
+.seg{display:flex;flex-direction:column;align-items:flex-start}
+.seg code{font-family:var(--font-code);font-size:17.5px;font-weight:700;color:var(--c);border-bottom:3px solid var(--c);padding-bottom:2px;white-space:nowrap}
+.seg small{font-size:12.5px;font-weight:900;color:var(--c);margin-top:3px;white-space:nowrap}
+.hdr{font-family:var(--font-code);font-size:15.5px;line-height:1.75;white-space:nowrap}
+.hdr .hk{color:var(--host)}
+.hdr .hv{color:#d7def0}
+.hdr .hj{font-family:var(--font-body);font-size:13.5px;font-weight:700;color:var(--muted);margin-left:8px}
+.body{font-family:var(--font-code);font-size:16px;line-height:1.6;white-space:pre;color:#d7def0;min-height:52px}
+.body .none{font-family:var(--font-body);font-weight:700;color:var(--muted);font-size:15px}
+.crud{display:flex;gap:8px}
+.crud span{flex:1;border-radius:8px;background:#0c1220;border:1.5px solid #26324c;padding:6px 8px;text-align:center;font-size:13.5px;font-weight:700;color:var(--muted)}
+.crud span b{display:block;font-family:var(--font-code);font-size:15px;color:#fff}
+
+/* JSON の色 */
+.jk{color:var(--host)}.js{color:#a5e8a0}.jn{color:#ffb57a}.jp{color:#8c99b5}
+
+/* ===========================================
+   ② FLOW — クライアント ⇄ APサーバ
+   =========================================== */
+.fl{left:820px;top:308px;width:1010px;height:356px;--k:var(--accent)}
+.cl{position:absolute;left:22px;top:62px;width:210px;height:274px;border-radius:14px;background:#0c1220;border:1.5px solid #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;transition:border-color .3s}
+.cl.act{border-color:var(--req)}
+.cl .ic{font-size:30px;line-height:1.2}
+.cl b{font-size:19px;font-weight:900}
+.cl small{font-size:13px;color:var(--muted);font-weight:700;line-height:1.4}
+.cl .got{margin-top:6px;font-size:13.5px;font-weight:900;color:var(--res);min-height:20px}
+.lane{position:absolute;left:236px;width:150px;height:3px;opacity:.45}
+.lane.a{top:150px;background:repeating-linear-gradient(90deg,var(--req) 0 10px,transparent 10px 18px)}
+.lane.b{top:262px;background:repeating-linear-gradient(90deg,var(--res) 0 10px,transparent 10px 18px)}
+.ll{position:absolute;left:236px;width:150px;text-align:center;font-size:13.5px;font-weight:900}
+.pkt{position:absolute;z-index:10;white-space:nowrap;font-family:var(--font-code);font-weight:700;font-size:15px;padding:7px 12px;border-radius:999px;pointer-events:none}
+.pkt.a{background:#07161a;border:2px solid var(--req);color:var(--req);box-shadow:0 0 20px rgba(79,227,240,.4)}
+.pkt.b{background:#140f24;border:2px solid var(--res);color:#e2d8ff;border-radius:10px;box-shadow:0 0 20px rgba(185,163,255,.4)}
+.ap{position:absolute;left:390px;top:52px;right:22px;height:288px;border-radius:14px;background:#15140a;border:2px solid rgba(244,208,63,.55);padding:12px 16px;transition:box-shadow .3s}
+.ap.act{box-shadow:0 0 0 5px rgba(244,208,63,.15)}
+.ap-h{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.ap-h b{font-size:21px;font-weight:900;color:var(--accent)}
+.ap-h small{font-size:13.5px;color:var(--muted);font-weight:700}
+.pipe{display:flex;flex-direction:column;gap:6px}
+.pp{display:flex;align-items:center;gap:12px;height:40px;border-radius:9px;background:#0c1220;border:1.5px solid #26324c;padding:0 12px;transition:all .3s}
+.pp .n{flex:none;width:24px;height:24px;border-radius:50%;background:#26324c;color:var(--muted);font-family:var(--font-code);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .3s}
+.pp b{flex:none;width:170px;font-size:15.5px;font-weight:900;color:#c9d4ee}
+.pp span{font-size:14.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp.on{border-color:var(--accent);background:#211d0a}
+.pp.on .n{background:var(--accent);color:#1a1505}
+.pp.on span{color:#fff}
+.pp.err{border-color:var(--ng);background:#2a1216}
+.pp.err .n{background:var(--ng);color:#fff}
+.pp.err span{color:#ffb3b3}
+.db{position:absolute;right:16px;bottom:12px;font-size:13px;color:var(--muted);font-weight:700}
+
+/* ===========================================
+   ③ RESPONSE — JSONのレスポンス
+   =========================================== */
+.rs{left:820px;top:680px;width:1010px;height:368px;--k:var(--res)}
+.rs-l{position:absolute;left:22px;top:62px;width:330px}
+.status{border-radius:12px;padding:12px 14px;border:2px solid var(--sc);background:color-mix(in srgb,var(--sc) 12%,#0c1220);transition:all .3s}
+.status code{font-family:var(--font-code);font-size:26px;font-weight:700;color:var(--sc)}
+.status small{display:block;font-size:15px;font-weight:900;color:#d7def0;margin-top:2px}
+.rhdr{margin-top:8px;font-family:var(--font-code);font-size:14px;color:#c9d4ee;line-height:1.6}
+.rhdr .hk{color:var(--host)}
+.codes{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px;font-weight:700;color:var(--muted)}
+.codes b{font-family:var(--font-code);font-size:13.5px;margin-right:4px}
+.json{position:absolute;left:372px;top:62px;right:22px;bottom:18px;border-radius:12px;background:#070b13;border:1.5px solid #1f293e;padding:12px 16px;font-family:var(--font-code);font-size:17px;line-height:1.55;white-space:pre;color:#d7def0;overflow:hidden}
+.json .tag{position:absolute;right:10px;top:8px;font-family:var(--font-body);font-size:12.5px;font-weight:900;color:#1a1033;background:var(--res);border-radius:5px;padding:1px 8px}
+.json .caret{display:inline-block;width:9px;height:18px;background:#fff;vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.wait{font-family:var(--font-body);color:#4d5a77;font-weight:700}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#1a1505}
+body.editing [data-edit]{outline:1.5px dashed rgba(244,208,63,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>AP SERVER I/O <span>／ リクエストを受けて、JSONを返す</span></div>
+      <h1 class="title" data-edit><em>APサーバ</em>の入出力 ― 何を受け取り、何を返す？</h1>
+    </div>
+    <button class="btn" id="btnPlay">⏸ 一時停止</button>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="hero-l"><span class="lb">ひとことで言うと</span><span class="eq">APサーバ ＝</span></div>
+    <div class="hero-msg" data-edit><span class="i">リクエスト</span>を受け取り、<mark>プログラムで処理</mark>して、<br>結果を <span class="o">JSON</span> で返す「処理係」のサーバ</div>
+    <div class="io"><span class="a">入力：リクエスト</span>▶<span class="b">⚙️ 処理</span>▶<span class="c">出力：JSON</span></div>
+  </div>
+
+  <!-- === ① REQUEST === -->
+  <div class="panel rq reveal d3">
+    <div class="p-h"><span class="no">1</span><b>リクエストの中身（入力）</b><span>例をクリックで切り替え</span></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="fade" id="anat">
+      <div class="sec">
+        <div class="sec-h"><i>①</i>メソッド ＋ URL<em style="color:var(--req)">クライアントが叩くURL</em></div>
+        <div class="reqline"><span class="method" id="mth"></span><div class="url" id="url"></div></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><i>②</i>ヘッダー<em>リクエストの「添え状」</em></div>
+        <div class="hdr" id="hdr"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-h"><i>③</i>ボディ<em>送りたいデータ本体（JSON）</em></div>
+        <div class="body" id="body"></div>
+      </div>
+    </div>
+    <div class="sec" style="margin-bottom:0">
+      <div class="sec-h"><i>★</i>メソッドの意味（CRUDと対応）</div>
+      <div class="crud">
+        <span><b>GET</b>取得する（R）</span>
+        <span><b>POST</b>作成する（C）</span>
+        <span><b>PUT / PATCH</b>更新する（U）</span>
+        <span><b>DELETE</b>削除する（D）</span>
+      </div>
+    </div>
+    <div class="sec" style="margin:10px 0 0;border-style:dashed;border-color:#33415f">
+      <div style="font-size:16px;font-weight:700;line-height:1.6;color:#d7def0" data-edit>💡 同じURLでも<b style="color:var(--accent)">メソッドが違えば別の処理</b>になります<br>
+      <code style="font-family:var(--font-code);color:var(--ok)">GET</code> <code style="font-family:var(--font-code)">/api/orders</code> → 注文の一覧　／　<code style="font-family:var(--font-code);color:var(--param)">POST</code> <code style="font-family:var(--font-code)">/api/orders</code> → 新しい注文</div>
+    </div>
+  </div>
+
+  <!-- === ② FLOW === -->
+  <div class="panel fl reveal d3">
+    <div class="p-h"><span class="no">2</span><b>リクエストとレスポンスの流れ</b></div>
+    <div class="cl" id="cl">
+      <span class="ic">🧑‍💻 📱</span><b>クライアント</b>
+      <small>ブラウザ・スマホアプリ<br>（Webサーバ経由のことも）</small>
+      <span class="got" id="got"></span>
+    </div>
+    <div class="ll" style="top:118px;color:var(--req)">リクエスト ▶</div>
+    <div class="lane a"></div>
+    <div class="lane b"></div>
+    <div class="ll" style="top:274px;color:var(--res)">◀ レスポンス（JSON）</div>
+    <div class="ap" id="ap">
+      <div class="ap-h"><b>⚙️ APサーバ</b><small>プログラム（Java・PHP・Python・Node.js など）が動く</small></div>
+      <div class="pipe" id="pipe"></div>
+    </div>
+  </div>
+
+  <!-- === ③ RESPONSE === -->
+  <div class="panel rs reveal d4">
+    <div class="p-h"><span class="no">3</span><b>レスポンス（出力）＝ JSONデータ</b><span>ステータスコード ＋ JSON本体</span></div>
+    <div class="rs-l">
+      <div class="status" id="status" style="--sc:#4d5a77"><code id="stCode">---</code><small id="stTx">待機中</small></div>
+      <div class="rhdr"><span class="hk">Content-Type:</span> application/json<br><span style="font-family:var(--font-body);font-weight:700;color:var(--muted);font-size:13px">↑「中身はJSONです」という印</span></div>
+      <div class="codes">
+        <span><b style="color:var(--ok)">200</b>成功</span><span><b style="color:var(--ok)">201</b>作成できた</span>
+        <span><b style="color:var(--param)">400</b>入力がおかしい</span><span><b style="color:var(--param)">401</b>ログインが必要</span>
+        <span><b style="color:var(--ng)">404</b>見つからない</span><span><b style="color:var(--ng)">500</b>サーバの不具合</span>
+      </div>
+    </div>
+    <div class="json" id="json"><span class="tag">JSON</span></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+
+/* ===========================================
+   EXAMPLES — 4つのリクエスト例（文言・URL・JSONはここで編集）
+   url: [文字列, 色, 説明] の並び
+   =========================================== */
+const HOST = ['https://shop.example.com', 'var(--host)', 'どこのサーバか'];
+const EX = [
+  { tab:'商品を検索', sub:'GET + クエリ',
+    method:'GET',
+    url:[HOST, ['/api/products','var(--path)','どの機能か（パス）'], ['?keyword=傘&limit=2','var(--query)','条件（クエリ）']],
+    headers:[['Accept','application/json','JSONで返してね'], ['User-Agent','Mozilla/5.0 …','ブラウザの種類']],
+    body:null,
+    pipe:['GET /api/products を受信','「商品検索」の処理に振り分け','keyword・limit の値はOK','「傘」を含む商品を2件取得','結果を JSON に変換'],
+    status:[200,'OK','成功！'],
+    json:{ total:3, items:[ {id:1,name:'折りたたみ傘',price:1980}, {id:2,name:'ビニール傘',price:550} ] },
+    got:'商品一覧を表示' },
+  { tab:'商品の詳細', sub:'GET + パス',
+    method:'GET',
+    url:[HOST, ['/api/products','var(--path)','どの機能か（パス）'], ['/1','var(--param)','商品ID（パスパラメータ）']],
+    headers:[['Accept','application/json','JSONで返してね']],
+    body:null,
+    pipe:['GET /api/products/1 を受信','「商品詳細」の処理に振り分け','ID が数字かチェック → OK','ID=1 の商品を取得','結果を JSON に変換'],
+    status:[200,'OK','成功！'],
+    json:{ id:1, name:'折りたたみ傘', price:1980, stock:10, colors:['黒','紺'] },
+    got:'商品ページを表示' },
+  { tab:'注文する', sub:'POST + ボディ',
+    method:'POST',
+    url:[HOST, ['/api/orders','var(--path)','どの機能か（パス）']],
+    headers:[['Content-Type','application/json','ボディはJSONです'], ['Authorization','Bearer eyJhbGci…','ログインの証明']],
+    body:{ productId:1, quantity:2 },
+    pipe:['POST /api/orders を受信','「注文作成」の処理に振り分け','ログイン・個数をチェック → OK','在庫を確認し注文を保存','結果を JSON に変換'],
+    status:[201,'Created','作成できた！'],
+    json:{ orderId:1001, status:'受付', total:3960 },
+    got:'注文完了を表示' },
+  { tab:'エラーの例', sub:'404 Not Found',
+    method:'GET',
+    url:[HOST, ['/api/products','var(--path)','どの機能か（パス）'], ['/999','var(--param)','存在しない商品ID']],
+    headers:[['Accept','application/json','JSONで返してね']],
+    body:null,
+    pipe:['GET /api/products/999 を受信','「商品詳細」の処理に振り分け','ID が数字かチェック → OK','ID=999 の商品は見つからない！','エラー内容を JSON に変換'],
+    errAt:3,
+    status:[404,'Not Found','見つからない'],
+    json:{ error:{ code:'NOT_FOUND', message:'商品が見つかりません' } },
+    got:'エラー表示' }
+];
+const PIPE_NAMES = ['受け取る','ルーティング','入力チェック','データを用意（DB）','JSONを作る'];
+
+/* JSON を色付きで整形（行の配列で返す） */
+function jsonLines(obj){ return colorize(compact(obj, 0)); }
+function compact(v, ind){
+  const pad = '  '.repeat(ind);
+  if (Array.isArray(v)){
+    if (v.every(x => typeof x !== 'object')) return '[' + v.map(x => JSON.stringify(x)).join(', ') + ']';
+    return '[\n' + v.map(x => pad + '  ' + (typeof x === 'object' ? JSON.stringify(x).replace(/,/g, ', ').replace(/:/g, ': ').replace(/^\{/, '{ ').replace(/\}$/, ' }') : JSON.stringify(x))).join(',\n') + '\n' + pad + ']';
+  }
+  if (v && typeof v === 'object'){
+    return '{\n' + Object.entries(v).map(([k, x]) => pad + '  ' + JSON.stringify(k) + ': ' + compact(x, ind + 1)).join(',\n') + '\n' + pad + '}';
+  }
+  return JSON.stringify(v);
+}
+function colorize(raw){
+  return raw.split('\n').map(l => esc(l)
+    .replace(/(&quot;|")([^"]+)"(?=:)/g, '<span class="jk">"$2"</span>')
+    .replace(/: "([^"]*)"/g, ': <span class="js">"$1"</span>')
+    .replace(/(^\s*)"([^"]*)"(,?)$/g, '$1<span class="js">"$2"</span>$3')
+    .replace(/: (-?\d+)/g, ': <span class="jn">$1</span>')
+    .replace(/([{}\[\]])/g, '<span class="jp">$1</span>'));
+}
+
+/* タブを作る */
+EX.forEach((e, i) => {
+  const t = document.createElement('div'); t.className = 'tab';
+  t.innerHTML = `<b>${e.tab}</b><small>${e.sub}</small>`;
+  t.onclick = () => play(i);
+  $('tabs').appendChild(t);
+});
+/* パイプラインを作る */
+PIPE_NAMES.forEach((n, i) => {
+  const d = document.createElement('div'); d.className = 'pp';
+  d.innerHTML = `<span class="n">${i+1}</span><b>${n}</b><span></span>`;
+  $('pipe').appendChild(d);
+});
+
+/* リクエストの中身を描く */
+function drawRequest(e){
+  $('mth').textContent = e.method; $('mth').className = 'method m-' + e.method;
+  $('url').innerHTML = e.url.map(([s, c, d]) => `<span class="seg" style="--c:${c}"><code>${esc(s)}</code><small>${d}</small></span>`).join('');
+  $('hdr').innerHTML = e.headers.map(([k, v, j]) => `<div><span class="hk">${k}:</span> <span class="hv">${esc(v)}</span><span class="hj">← ${j}</span></div>`).join('');
+  $('body').innerHTML = e.body ? jsonLines(e.body).join('\n') : '<span class="none">なし（GET は URL に条件を書くので、ボディは空がふつう）</span>';
+}
+function resetFlow(){
+  [...$('pipe').children].forEach(p => { p.className = 'pp'; p.lastElementChild.textContent = ''; });
+  $('status').style.setProperty('--sc', '#4d5a77'); $('stCode').textContent = '---'; $('stTx').textContent = '待機中';
+  $('json').innerHTML = '<span class="tag">JSON</span><span class="wait">（レスポンスを待っています…）</span>';
+  $('got').textContent = ''; $('cl').classList.remove('act'); $('ap').classList.remove('act');
+}
+
+/* ===========================================
+   ANIMATION — 1つの例を最初から最後まで再生
+   =========================================== */
+let token = 0, cur = 0, playing = true;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('stop'), ms));
+function packet(cls, html, dir, t){
+  if (t !== token) return Promise.reject('stop');
+  const el = document.createElement('div'); el.className = 'pkt ' + cls; el.innerHTML = html;
+  el.style.left = '1131px'; el.style.top = (cls === 'a' ? 459 : 571) + 'px';
+  $('slide').appendChild(el);
+  const d = 110;
+  return el.animate([
+    { transform:`translate(-50%,-50%) translateX(${-d*dir}px) scale(.7)`, opacity:0 },
+    { transform:`translate(-50%,-50%) translateX(${-d*dir*.6}px) scale(1)`, opacity:1, offset:.15 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir*.6}px) scale(1)`, opacity:1, offset:.85 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir}px) scale(.7)`, opacity:0 }
+  ], { duration:1500, easing:'cubic-bezier(.45,0,.25,1)', fill:'forwards' }).finished
+   .then(() => { el.remove(); if (t !== token) throw 'stop'; });
+}
+async function play(i){
+  const t = ++token; cur = i; const e = EX[i];
+  document.querySelectorAll('.pkt').forEach(p => p.remove());
+  [...$('tabs').children].forEach((el, j) => el.classList.toggle('on', j === i));
+  $('anat').classList.add('out');
+  try{
+    await sleep(250, t); drawRequest(e); $('anat').classList.remove('out'); resetFlow();
+    await sleep(900, t);
+    // リクエスト送信
+    $('cl').classList.add('act');
+    const path = e.url.slice(1).map(u => u[0]).join('');
+    await packet('a', `${e.method} ${esc(path.length > 22 ? path.slice(0, 21) + '…' : path)}`, 1, t);
+    $('cl').classList.remove('act'); $('ap').classList.add('act');
+    // APサーバの中の処理
+    const ps = [...$('pipe').children];
+    for (let k = 0; k < ps.length; k++){
+      ps[k].classList.add(e.errAt === k ? 'err' : 'on');
+      ps[k].lastElementChild.textContent = e.pipe[k];
+      await sleep(650, t);
+    }
+    // レスポンス
+    const [code, en, ja] = e.status;
+    const sc = code >= 400 ? 'var(--ng)' : 'var(--ok)';
+    $('status').style.setProperty('--sc', sc); $('stCode').textContent = `${code} ${en}`; $('stTx').textContent = ja;
+    const lines = jsonLines(e.json), J = $('json');
+    J.innerHTML = '<span class="tag">JSON</span>';
+    const box = document.createElement('span'); J.appendChild(box);
+    for (let k = 0; k < lines.length; k++){
+      box.innerHTML = lines.slice(0, k + 1).join('\n') + '<span class="caret"></span>';
+      await sleep(90, t);
+    }
+    box.innerHTML = lines.join('\n');
+    $('ap').classList.remove('act');
+    await packet('b', `${code} ${en}<br>{ JSON }`, -1, t);
+    $('cl').classList.add('act'); $('got').textContent = '✔ ' + e.got;
+    await sleep(3600, t);
+    if (playing) play((i + 1) % EX.length);
+  }catch(err){ /* 中断 */ }
+}
+function setPlaying(v){
+  playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v) play((cur + 1) % EX.length);
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') play((cur + 1) % EX.length);
+  if (e.key === 'ArrowLeft') play((cur - 1 + EX.length) % EX.length);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit]').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'ap-server-io.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+drawRequest(EX[0]); resetFlow();
+setTimeout(() => play(0), 900);
+</script>
+</body>
+</html>

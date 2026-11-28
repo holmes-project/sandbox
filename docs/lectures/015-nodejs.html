@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Node.jsってなに？ JavaScriptとの違い</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --node:#7ed957;     /* Node.js（主役） */
+  --js:#f4d03f;       /* JavaScript */
+  --client:#4fe3f0;   /* ブラウザ側 */
+  --req:#4fe3f0;
+  --res:#7ed957;
+  --ng:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(520px 420px at 440px 600px, rgba(79,227,240,.06), transparent 70%),
+    radial-gradient(520px 420px at 1480px 600px, rgba(126,217,87,.07), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--node);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:62px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--node)}
+.controls{display:flex;gap:14px}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--node)}
+
+/* ===========================================
+   HERO — Node.js をひとことで ／ JavaScript との違い
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:176px;height:120px;display:flex;gap:18px}
+.def{border-radius:18px;display:flex;align-items:center;gap:22px;padding:0 28px}
+.def.main{flex:1.15;background:linear-gradient(90deg,#132313,#121827 70%);border:2px solid rgba(126,217,87,.6)}
+.def.diff{flex:1;background:#101826;border:1.5px solid var(--line)}
+.def .l{flex:none;display:flex;flex-direction:column;gap:6px}
+.def .lb{font-size:16px;font-weight:900;color:#0c1a06;background:var(--node);border-radius:7px;padding:3px 10px;align-self:flex-start}
+.def.diff .lb{background:#3a4766;color:#eef3ff}
+.def .eq{font-family:var(--font-display);font-size:34px;color:var(--node);line-height:1}
+.def p{font-size:27px;font-weight:900;line-height:1.42}
+.def p mark{background:linear-gradient(transparent 62%,rgba(126,217,87,.4) 62%);color:#fff;padding:0 2px}
+.def p small{display:block;font-size:16px;color:var(--muted);font-weight:700}
+.pair{display:flex;flex-direction:column;gap:8px;flex:1}
+.pair div{display:flex;align-items:center;gap:12px;font-size:22px;font-weight:900}
+.pair i{font-style:normal;flex:none;font-size:15px;color:#0a0e16;border-radius:7px;padding:3px 10px;width:104px;text-align:center}
+.pair .q{font-size:15px;color:var(--muted);font-weight:700;margin-left:auto}
+
+/* ===========================================
+   PANELS — クライアント（ブラウザ） ／ サーバ（Node.js）
+   =========================================== */
+.pn{position:absolute;top:316px;width:720px;height:534px;border-radius:20px;background:var(--panel);border:2px solid color-mix(in srgb,var(--k) 40%,#1f2a40);padding:16px 20px;transition:box-shadow .35s,border-color .35s}
+.pn.act{border-color:var(--k);box-shadow:0 0 0 6px color-mix(in srgb,var(--k) 16%,transparent)}
+.pn.cl{left:90px;--k:var(--client)}
+.pn.sv{left:1110px;--k:var(--node)}
+.pn-h{display:flex;align-items:center;gap:12px}
+.pn-h .tg{font-family:var(--font-code);font-weight:700;font-size:15px;color:#0a0e16;background:var(--k);border-radius:6px;padding:3px 10px}
+.pn-h b{font-size:27px;font-weight:900;color:var(--k)}
+.pn-h span{margin-left:auto;font-size:15px;font-weight:700;color:var(--muted)}
+
+/* コード */
+.code{margin-top:12px;border-radius:12px;background:#070b13;border:1.5px solid #1f293e;padding:8px 0;position:relative}
+.code .fn{position:absolute;right:10px;top:-11px;font-family:var(--font-code);font-size:12.5px;background:#1b2538;color:var(--muted);border-radius:6px;padding:2px 8px}
+.ln{font-family:var(--font-code);font-size:15.5px;line-height:25px;white-space:pre;padding:0 14px;border-left:4px solid transparent;color:#c9d4ee;transition:background .25s,border-color .25s}
+.ln.hl{background:color-mix(in srgb,var(--k) 18%,transparent);border-left-color:var(--k);color:#fff}
+.ln .c{color:#5f6c88}.ln .k{color:#d7a6ff}.ln .s{color:#a5e8a0}.ln .f{color:#ffe17a}
+
+/* ミニ表示（画面／サーバの中） */
+.mini{margin-top:10px;height:84px;display:flex;gap:12px}
+.scr{flex:1;border-radius:10px;background:#fff;color:#222;overflow:hidden;position:relative}
+.scr-top{height:22px;background:#dfe4ec;display:flex;align-items:center;gap:5px;padding:0 8px}
+.scr-top i{width:7px;height:7px;border-radius:50%;background:#b6bfcc}
+.scr-b{display:flex;align-items:center;gap:14px;padding:10px 14px}
+.sbtn{flex:none;font-size:15px;font-weight:900;color:#fff;background:#2b59c3;border-radius:7px;padding:6px 14px;transition:transform .15s}
+.sbtn.press{transform:scale(.88)}
+.msg{font-size:17px;font-weight:900;color:#9aa3b2;transition:color .3s}
+.msg.on{color:#0f7a35}
+.cursor{position:absolute;width:24px;height:24px;left:200px;top:70px;opacity:0;transition:left .7s var(--ease),top .7s var(--ease),opacity .3s}
+.cursor.on{opacity:1}
+.term{flex:1;border-radius:10px;background:#05080e;border:1.5px solid #1f293e;padding:8px 12px;font-family:var(--font-code);font-size:14px;line-height:1.6;color:#c9d4ee}
+.term .p{color:var(--node)}
+.term .o{color:#a8f0cf}
+.file{flex:none;width:200px;border-radius:10px;background:#0c1220;border:1.5px solid #2a3858;display:flex;align-items:center;gap:10px;padding:0 12px;transition:all .3s}
+.file .fi{font-size:30px}
+.file b{display:block;font-family:var(--font-code);font-size:15px}
+.file small{font-size:13.5px;font-weight:700;color:var(--muted)}
+.file.read{border-color:var(--node);background:#132313}
+.status{display:flex;align-items:center;gap:8px;margin-top:8px;height:34px;border-radius:9px;background:#0a0f1a;border:1.5px dashed #2a3858;padding:0 12px;font-size:15.5px;font-weight:700;color:var(--muted);transition:all .3s}
+.status i{width:9px;height:9px;border-radius:50%;background:#34415f}
+.status.on{border-style:solid;border-color:var(--k);color:#fff}
+.status.on i{background:var(--k);box-shadow:0 0 8px var(--k);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+
+/* できる／できない */
+.cando{margin-top:8px;display:flex;gap:10px}
+.cd{flex:1;border-radius:10px;padding:8px 12px;font-size:15px;font-weight:700;line-height:1.55}
+.cd h4{font-size:15px;font-weight:900;margin-bottom:2px}
+.cd.y{background:color-mix(in srgb,var(--k) 9%,#0c1220);border:1.5px solid color-mix(in srgb,var(--k) 40%,#1f2a40)}
+.cd.y h4{color:var(--k)}
+.cd.n{background:#1a1013;border:1.5px solid rgba(255,107,107,.35)}
+.cd.n h4{color:var(--ng)}
+.cd li{list-style:none}
+.cd li::before{content:'・'}
+
+/* ===========================================
+   CHANNEL — 中央（同じ JavaScript ／ 通信）
+   =========================================== */
+.same{position:absolute;left:830px;width:260px;top:330px;text-align:center}
+.same .js{display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:12px;background:var(--js);color:#1a1505;font-family:var(--font-display);font-size:30px}
+.same p{font-size:17px;font-weight:900;margin-top:8px;line-height:1.45}
+.same p small{display:block;font-size:14px;color:var(--muted);font-weight:700}
+.lane{position:absolute;left:830px;width:260px;height:3px;opacity:.45}
+.lane.a{top:600px;background:repeating-linear-gradient(90deg,var(--req) 0 10px,transparent 10px 18px)}
+.lane.b{top:720px;background:repeating-linear-gradient(90deg,var(--res) 0 10px,transparent 10px 18px)}
+.lane.a::after,.lane.b::after{position:absolute;top:-10px;font-size:17px;line-height:1}
+.lane.a::after{content:'▶';right:-6px;color:var(--req)}
+.lane.b::after{content:'◀';left:-6px;color:var(--res)}
+.ll{position:absolute;left:830px;width:260px;text-align:center;font-size:14.5px;font-weight:900}
+.net{position:absolute;left:830px;width:260px;top:536px;text-align:center;font-size:15px;font-weight:900;color:var(--muted)}
+.pkt{position:absolute;left:960px;z-index:10;white-space:nowrap;font-family:var(--font-code);font-weight:700;font-size:15px;padding:7px 12px;border-radius:999px;pointer-events:none}
+.pkt.a{top:600px;background:#07161a;border:2px solid var(--req);color:var(--req);box-shadow:0 0 20px rgba(79,227,240,.4)}
+.pkt.b{top:720px;background:#0e1a0a;border:2px solid var(--res);color:#d6f5c6;border-radius:10px;box-shadow:0 0 20px rgba(126,217,87,.4)}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:866px;height:76px;border-radius:16px;background:linear-gradient(90deg,#122016,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 26px}
+.cap-no{flex:none;width:52px;height:52px;border-radius:50%;background:var(--ck,var(--node));color:#0a0e16;font-family:var(--font-display);font-size:24px;display:flex;align-items:center;justify-content:center;transition:background .3s}
+.cap-w{flex:none;font-size:20px;font-weight:900;color:var(--ck,var(--node));transition:color .3s}
+.cap-tx{font-size:23px;font-weight:700;line-height:1.4;transition:opacity .25s}
+.cap-tx b{color:var(--node);font-weight:900}
+.cap-tx code{font-family:var(--font-code);font-size:20px;background:#1b2538;border-radius:6px;padding:1px 8px}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   FOOTER — Node.js の主な使い道
+   =========================================== */
+.uses{position:absolute;left:90px;right:90px;top:958px;height:86px;display:flex;gap:12px;align-items:stretch}
+.uses .h{flex:none;display:flex;align-items:center;font-size:18px;font-weight:900;color:var(--node);padding-right:6px}
+.use{flex:1;border-radius:12px;background:var(--panel);border:1.5px solid var(--line);padding:9px 14px}
+.use b{display:block;font-size:17px;font-weight:900}
+.use small{display:block;font-size:13.5px;font-weight:700;color:var(--muted);margin-top:3px;line-height:1.45}
+.use code{font-family:var(--font-code);color:#d6f5c6}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--node);color:#0c1a06}
+body.editing [data-edit]{outline:1.5px dashed rgba(126,217,87,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>NODE.JS <span>／ ブラウザの外で動く JavaScript</span></div>
+      <h1 class="title" data-edit><em>Node.js</em>ってなに？ JavaScriptとの違い</h1>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btnPlay">⏸ 一時停止</button>
+      <button class="btn" id="btnReplay">↻ 最初から</button>
+    </div>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="def main">
+      <div class="l"><span class="lb">ひとことで言うと</span><span class="eq">Node.js ＝</span></div>
+      <p data-edit><mark>ブラウザの外（サーバやPC）</mark>で<br>JavaScript を動かすための<mark>実行環境</mark><small>読み方は「ノード・ジェイエス」。無料で使える</small></p>
+    </div>
+    <div class="def diff">
+      <div class="l"><span class="lb">JavaScriptとの違い</span></div>
+      <div class="pair">
+        <div><i style="background:var(--js)">JavaScript</i><span data-edit>プログラムを書く<b style="color:var(--js)">「言葉」</b></span><span class="q">言語</span></div>
+        <div><i style="background:var(--node)">Node.js</i><span data-edit>その言葉を動かす<b style="color:var(--node)">「場所・環境」</b></span><span class="q">実行環境</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === CLIENT PANEL === -->
+  <div class="pn cl reveal d3" id="pCl">
+    <div class="pn-h"><span class="tg">CLIENT</span><b>🌐 ブラウザで動く JS</b><span data-edit>利用者のPC・スマホの中で実行</span></div>
+    <div class="code" id="codeCl"><span class="fn">app.js（ブラウザ）</span></div>
+    <div class="mini">
+      <div class="scr">
+        <div class="scr-top"><i></i><i></i><i></i></div>
+        <div class="scr-b"><span class="sbtn" id="sbtn">ニュースを見る</span><span class="msg" id="msg">（まだ何もない）</span></div>
+        <svg class="cursor" id="cursor" viewBox="0 0 24 24"><path d="M3 2l7 19 2.5-7.5L20 11z" fill="#fff" stroke="#111" stroke-width="1.5"/></svg>
+      </div>
+    </div>
+    <div class="status" id="stCl"><i></i><span>待機中</span></div>
+    <div class="cando">
+      <div class="cd y"><h4>得意なこと</h4><ul><li>画面（DOM）を書き換える</li><li>クリックなどの操作に反応</li></ul></div>
+      <div class="cd n"><h4>できないこと</h4><ul><li>PCのファイルを自由に読む</li><li>DBに直接つなぐ</li></ul></div>
+    </div>
+  </div>
+
+  <!-- === CENTER === -->
+  <div class="same reveal d3">
+    <span class="js">JS</span>
+    <p data-edit>書く言葉は<br>どちらも JavaScript<small>動く「場所」が違う！</small></p>
+  </div>
+  <div class="net reveal d4">🌐 インターネット</div>
+  <div class="ll reveal d4" style="top:572px;color:var(--req)">リクエスト ▶</div>
+  <div class="lane a reveal d4"></div>
+  <div class="lane b reveal d4"></div>
+  <div class="ll reveal d4" style="top:732px;color:var(--res)">◀ レスポンス（JSON）</div>
+
+  <!-- === SERVER PANEL === -->
+  <div class="pn sv reveal d3" id="pSv">
+    <div class="pn-h"><span class="tg">SERVER</span><b>🖥️ Node.js で動く JS</b><span data-edit>サーバの中で実行</span></div>
+    <div class="code" id="codeSv"><span class="fn">server.js（Node.js）</span></div>
+    <div class="mini">
+      <div class="term"><span class="p">$</span> node server.js<br><span class="o" id="tOut">サーバ起動：3000番で待機中</span></div>
+      <div class="file" id="file"><span class="fi">📄</span><div><b>news.txt</b><small>今日は晴れ！</small></div></div>
+    </div>
+    <div class="status" id="stSv"><i></i><span>リクエストを待っている</span></div>
+    <div class="cando">
+      <div class="cd y"><h4>得意なこと</h4><ul><li>ファイル・DBを読み書き</li><li>APIとしてデータを返す</li></ul></div>
+      <div class="cd n"><h4>できないこと</h4><ul><li>画面（DOM）をさわる</li><li>ボタンのクリックを直接受ける</li></ul></div>
+    </div>
+  </div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4" id="caption">
+    <span class="cap-no" id="capNo">1</span><span class="cap-w" id="capW"></span><span class="cap-tx" id="capTx"></span>
+  </div>
+
+  <!-- === USES === -->
+  <div class="uses reveal d4">
+    <span class="h" data-edit>Node.js の<br>主な使い道</span>
+    <div class="use"><b>🖥️ Webサーバ・API</b><small>APサーバとして JSON を返す<br>例：<code>Express</code></small></div>
+    <div class="use"><b>📦 npm（パッケージ）</b><small>便利な部品をコマンド1つで追加<br>例：<code>npm install</code></small></div>
+    <div class="use"><b>🛠️ 開発ツール</b><small>画面づくりの道具も Node.js で動く<br>例：<code>Vite</code></small></div>
+    <div class="use"><b>💬 リアルタイム通信</b><small>チャット・通知など<br>たくさんの接続をさばくのが得意</small></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   CODE — 表示するソース（<c> コメント <k> 予約語 <s> 文字列 <f> 関数）
+   =========================================== */
+const CL = [
+  "<c>// ボタンが押されたら動く</c>",
+  "btn.<f>addEventListener</f>(<s>'click'</s>, <k>async</k> () => {",
+  "  <c>// サーバにデータをお願いする</c>",
+  "  <k>const</k> res = <k>await</k> <f>fetch</f>(<s>'/api/news'</s>);",
+  "  <k>const</k> data = <k>await</k> res.<f>json</f>();",
+  "  <c>// 画面（DOM）を書き換える</c>",
+  "  msg.textContent = data.title;",
+  "});"
+];
+const SV = [
+  "<k>const</k> fs = <f>require</f>(<s>'fs'</s>);   <c>// ファイルを扱う</c>",
+  "<k>const</k> app = <f>require</f>(<s>'express'</s>)();",
+  "<c>// /api/news にリクエストが来たら</c>",
+  "app.<f>get</f>(<s>'/api/news'</s>, (req, res) => {",
+  "  <k>const</k> t = fs.<f>readFileSync</f>(<s>'news.txt'</s>, <s>'utf8'</s>);",
+  "  res.<f>json</f>({ title: t });  <c>// JSONで返す</c>",
+  "});",
+  "app.<f>listen</f>(3000);  <c>// 3000番で待つ</c>"
+];
+function fill(id, lines){
+  $(id).insertAdjacentHTML('beforeend', lines.map((l, i) =>
+    `<div class="ln" data-i="${i}">${l.replace(/<([cksf])>/g, '<span class="$1">').replace(/<\/[cksf]>/g, '</span>')}</div>`).join(''));
+}
+fill('codeCl', CL); fill('codeSv', SV);
+function hl(id, idx){ $(id).querySelectorAll('.ln').forEach(e => e.classList.toggle('hl', idx.includes(+e.dataset.i))); }
+
+/* ===========================================
+   STEPS — 5つの場面（文言はここで編集）
+   =========================================== */
+let token = 0, playing = true, cur = 0;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('stop'), ms));
+function st(id, text, on=true){ $(id).classList.toggle('on', on); $(id).lastElementChild.textContent = text; }
+function act(which){ $('pCl').classList.toggle('act', which === 'cl'); $('pSv').classList.toggle('act', which === 'sv'); }
+function cap(n, who, color, html){
+  $('caption').style.setProperty('--ck', color);
+  $('capNo').textContent = n; $('capW').textContent = who;
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { tx.innerHTML = html; tx.classList.remove('fade'); }, 180);
+}
+function packet(cls, text, dir, t){
+  if (t !== token) return Promise.reject('stop');
+  const el = document.createElement('div'); el.className = 'pkt ' + cls; el.textContent = text;
+  $('slide').appendChild(el);
+  const d = 110;
+  return el.animate([
+    { transform:`translate(-50%,-50%) translateX(${-d*dir}px) scale(.7)`, opacity:0 },
+    { transform:`translate(-50%,-50%) translateX(${-d*dir*.6}px) scale(1)`, opacity:1, offset:.15 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir*.6}px) scale(1)`, opacity:1, offset:.85 },
+    { transform:`translate(-50%,-50%) translateX(${d*dir}px) scale(.7)`, opacity:0 }
+  ], { duration:1500, easing:'cubic-bezier(.45,0,.25,1)', fill:'forwards' }).finished
+   .then(() => { el.remove(); if (t !== token) throw 'stop'; });
+}
+function reset(){
+  hl('codeCl', []); hl('codeSv', []); act(null);
+  $('msg').textContent = '（まだ何もない）'; $('msg').classList.remove('on');
+  $('cursor').classList.remove('on'); $('cursor').style.left = '200px'; $('cursor').style.top = '70px';
+  $('file').classList.remove('read'); $('tOut').textContent = 'サーバ起動：3000番で待機中';
+  st('stCl', '待機中', false); st('stSv', 'リクエストを待っている', false);
+  document.querySelectorAll('.pkt').forEach(p => p.remove());
+}
+async function loop(){
+  const t = ++token;
+  try{
+    while (true){
+      reset(); await sleep(900, t);
+
+      // ① クリック（ブラウザの JS が動く）
+      cap(1, 'ブラウザ', 'var(--client)', '利用者がボタンをクリック。<b style="color:var(--client)">ブラウザの中の JavaScript</b> が反応します。');
+      act('cl'); $('cursor').classList.add('on'); await sleep(200, t);
+      $('cursor').style.left = '138px'; $('cursor').style.top = '50px'; await sleep(800, t);
+      $('sbtn').classList.add('press'); await sleep(160, t); $('sbtn').classList.remove('press');
+      hl('codeCl', [0,1]); st('stCl', 'クリックを受け取った'); await sleep(1800, t);
+
+      // ② fetch でサーバへ
+      cap(2, 'ブラウザ', 'var(--client)', '<code>fetch</code> で、インターネットの向こうの<b>サーバ</b>に「ニュースをちょうだい」とお願いします。');
+      hl('codeCl', [2,3]); st('stCl', 'サーバの返事を待っている…');
+      await packet('a', 'GET /api/news', 1, t);
+
+      // ③ Node.js が受け取り、ファイルを読む
+      act('sv');
+      cap(3, 'Node.js', 'var(--node)', 'サーバでは <b>Node.js</b> が JavaScript を実行。ブラウザではできない<b>ファイルの読み込み</b>ができます。');
+      hl('codeSv', [2,3]); st('stSv', 'リクエストを受け取った'); await sleep(1300, t);
+      hl('codeSv', [4]); $('file').classList.add('read'); st('stSv', 'news.txt を読み込み中…'); await sleep(1600, t);
+
+      // ④ JSON で返す
+      cap(4, 'Node.js', 'var(--node)', '読み込んだ内容を <b>JSON</b> にして、ブラウザへ返します（APサーバの役割）。');
+      hl('codeSv', [5]); st('stSv', 'JSONで返した'); $('tOut').textContent = 'GET /api/news → 200 OK';
+      await packet('b', '{ "title": "今日は晴れ！" }', -1, t);
+      st('stSv', 'リクエストを待っている', false); hl('codeSv', []);
+
+      // ⑤ 画面を書き換える
+      act('cl');
+      cap(5, 'ブラウザ', 'var(--client)', 'ブラウザの JS が受け取ったデータで<b style="color:var(--client)">画面（DOM）を書き換え</b>て完成！ 同じ JavaScript が、場所ごとに役割分担しています。');
+      hl('codeCl', [4,5,6]); await sleep(700, t);
+      $('msg').textContent = '今日は晴れ！'; $('msg').classList.add('on'); st('stCl', '画面を書き換えた');
+      await sleep(4200, t);
+    }
+  }catch(e){ /* 停止 */ }
+}
+function setPlaying(v){
+  playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v) loop(); else token++;
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+$('btnReplay').onclick = () => { playing = true; $('btnPlay').textContent = '⏸ 一時停止'; loop(); };
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .cd li, .use small').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'nodejs.html'; a.click();
+    }
+  });
+})();
+
+/* 起動 */
+setTimeout(loop, 900);
+</script>
+</body>
+</html>
