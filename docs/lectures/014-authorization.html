@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>認可ってなに？ 認証との違い</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   THEME — 色やフォントはここを変えるだけで全体が変わる
+   =========================================== */
+:root{
+  --stage-bg:#05070c;
+  --slide-bg:#0a0e16;
+  --panel:#111827;
+  --panel-2:#0c1220;
+  --line:#243049;
+  --text:#eef3ff;
+  --muted:#8c99b5;
+  --accent:#c4a7ff;   /* 認可（主役） */
+  --authn:#5aa2ff;    /* 認証 */
+  --authz:#c4a7ff;    /* 認可 */
+  --proc:#f4d03f;     /* 処理 */
+  --ok:#2ee6a8;
+  --ng:#ff6b6b;
+  --font-display:'Dela Gothic One','Zen Kaku Gothic New',sans-serif;
+  --font-body:'Zen Kaku Gothic New','Noto Sans CJK JP',sans-serif;
+  --font-code:'JetBrains Mono',monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ===========================================
+   FIXED 16:9 STAGE: MANDATORY BASE STYLES (viewport-base.css)
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--stage-bg,#000)}
+.deck-stage{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;transform-origin:0 0;background:var(--slide-bg,#fff)}
+.slide{position:absolute;inset:0;width:1920px;height:1080px;overflow:hidden;display:block;visibility:hidden;opacity:0;pointer-events:none;background:var(--slide-bg,#fff)}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1}
+img,video,canvas,svg{max-width:100%;max-height:100%}
+.deck-controls{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:1000}
+@media print{
+  html,body{width:1920px;height:auto;overflow:visible;background:#fff}
+  .deck-viewport{position:static;overflow:visible;background:#fff}
+  .deck-stage{position:static;width:auto;height:auto;transform:none!important;background:none}
+  .slide{position:relative;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:1920px;height:1080px;break-after:page;page-break-after:always}
+  .slide:last-child{break-after:auto;page-break-after:auto}
+  .deck-controls{display:none!important}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.2s!important}
+}
+
+/* ===========================================
+   BACKGROUND
+   =========================================== */
+.slide{font-family:var(--font-body);color:var(--text)}
+.bg{position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(420px 320px at 520px 600px, rgba(90,162,255,.07), transparent 70%),
+    radial-gradient(520px 340px at 950px 600px, rgba(196,167,255,.08), transparent 70%),
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px,
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px) 0 0/48px 48px;}
+
+/* ===========================================
+   HEADER
+   =========================================== */
+.header{position:absolute;left:90px;top:40px;right:90px;display:flex;justify-content:space-between;align-items:flex-end}
+.kicker{font-family:var(--font-code);font-size:22px;letter-spacing:.18em;color:var(--accent);margin-bottom:8px}
+.kicker span{color:var(--muted)}
+h1.title{font-family:var(--font-display);font-weight:400;font-size:62px;line-height:1.05}
+h1.title em{font-style:normal;color:var(--accent)}
+.btn{font-family:var(--font-body);font-weight:700;font-size:22px;color:var(--text);background:#141c2c;border:1.5px solid var(--line);border-radius:999px;padding:12px 24px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+
+/* ===========================================
+   HERO — 認可をひとことで ／ 認証との違い
+   =========================================== */
+.hero{position:absolute;left:90px;right:90px;top:176px;height:124px;display:flex;gap:18px}
+.def{border-radius:18px;display:flex;align-items:center;gap:22px;padding:0 28px}
+.def.main{flex:1.1;background:linear-gradient(90deg,#1b1430,#121827 70%);border:2px solid rgba(196,167,255,.6)}
+.def.diff{flex:1;background:#101826;border:1.5px solid var(--line)}
+.def .l{flex:none;display:flex;flex-direction:column;gap:6px}
+.def .lb{font-size:16px;font-weight:900;color:#160d2a;background:var(--accent);border-radius:7px;padding:3px 10px;align-self:flex-start}
+.def.diff .lb{background:#3a4766;color:#eef3ff}
+.def .eq{font-family:var(--font-display);font-size:34px;color:var(--accent);line-height:1}
+.def p{font-size:28px;font-weight:900;line-height:1.42}
+.def p mark{background:linear-gradient(transparent 62%,rgba(196,167,255,.42) 62%);color:#fff;padding:0 2px}
+.def p small{display:block;font-size:16px;color:var(--muted);font-weight:700}
+.pair{display:flex;flex-direction:column;gap:8px;flex:1}
+.pair div{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:900}
+.pair i{font-style:normal;flex:none;font-size:16px;color:#0a0e16;border-radius:7px;padding:3px 10px}
+.pair .q{font-size:15.5px;color:var(--muted);font-weight:700;margin-left:auto}
+
+/* ===========================================
+   FLOW — 認証 → 認可 → 処理
+   =========================================== */
+.flow-h{position:absolute;left:90px;top:322px;right:90px;display:flex;align-items:center;gap:14px}
+.flow-h b{font-size:22px;font-weight:900}
+.flow-h b em{font-style:normal;color:var(--proc)}
+.tabs{margin-left:auto;display:flex;gap:10px}
+.tab{border-radius:10px;background:#0c1220;border:1.5px solid #26324c;padding:6px 14px;cursor:pointer;font-size:16px;font-weight:900;color:var(--muted);transition:all .25s;display:flex;align-items:center;gap:8px}
+.tab:hover{border-color:var(--accent)}
+.tab.on{border-color:var(--accent);background:#1b1430;color:#fff}
+.tab small{font-size:13px;font-weight:700}
+
+.stagebox{position:absolute;left:90px;right:90px;top:372px;height:432px;border-radius:20px;background:var(--panel);border:1.5px solid var(--line)}
+.nd{position:absolute;top:22px;height:388px;border-radius:16px;background:#0c1220;border:2px solid color-mix(in srgb,var(--k) 35%,#1f2a40);padding:14px 16px;transition:border-color .35s,box-shadow .35s,opacity .35s}
+.nd.act{border-color:var(--k);box-shadow:0 0 0 5px color-mix(in srgb,var(--k) 18%,transparent),0 0 40px color-mix(in srgb,var(--k) 15%,transparent)}
+.nd.skip{opacity:.35}
+.nd .tg{display:inline-block;font-size:14px;font-weight:900;color:#0a0e16;background:var(--k);border-radius:6px;padding:2px 9px}
+.nd h3{font-size:25px;font-weight:900;color:var(--k);margin:6px 0 2px;display:flex;align-items:center;gap:8px}
+.nd .qq{font-size:16px;font-weight:900;color:#d7def0;margin-bottom:10px}
+.n-user{left:20px;width:250px;--k:#eef3ff}
+.n-authn{left:320px;width:330px;--k:var(--authn)}
+.n-authz{left:700px;width:450px;--k:var(--authz)}
+.n-proc{left:1200px;width:250px;--k:var(--proc)}
+.n-res{left:1500px;width:220px;--k:var(--ok)}
+.arw{position:absolute;top:200px;width:50px;text-align:center;font-size:26px;color:#3d4a68;transition:color .3s}
+.arw.on{color:#fff}
+
+/* ユーザー */
+.avatar{width:96px;height:96px;border-radius:50%;margin:8px auto 10px;background:#1b2538;display:flex;align-items:center;justify-content:center;font-size:52px}
+.u-name{text-align:center;font-size:22px;font-weight:900}
+.u-role{text-align:center;font-size:15px;font-weight:700;color:var(--muted);margin-top:2px}
+.u-want{margin-top:14px;border-radius:10px;background:#111827;border:1.5px dashed #33415f;padding:10px;text-align:center;font-size:16px;font-weight:900}
+.u-want b{display:block;color:var(--proc);font-size:19px}
+
+/* 認証 */
+.login{border-radius:10px;background:#070b13;border:1.5px solid #2a3858;padding:10px 12px;font-size:15px;font-weight:700;color:var(--muted)}
+.login .f{display:flex;justify-content:space-between;align-items:center;height:32px}
+.login code{font-family:var(--font-code);font-size:16px;color:#fff}
+.judge{margin-top:12px;border-radius:12px;height:86px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:2px dashed #2a3858;font-size:16px;font-weight:900;color:#4d5a77;text-align:center;transition:all .35s}
+.judge .big{font-size:22px}
+.judge small{font-size:13.5px;font-weight:700}
+.judge.ok{border-style:solid;border-color:var(--ok);color:var(--ok);background:rgba(46,230,168,.08)}
+.judge.ng{border-style:solid;border-color:var(--ng);color:var(--ng);background:rgba(255,107,107,.08)}
+.judge.ng small,.judge.ok small{color:#d7def0}
+.code{font-family:var(--font-code);font-size:14px;padding:1px 7px;border-radius:5px;background:#1b2538;margin-left:4px}
+
+/* 認可：権限表 */
+.ptab{width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;overflow:hidden;border:1.5px solid #2a3858}
+.ptab th,.ptab td{font-size:16px;font-weight:900;text-align:center;padding:7px 6px;border-bottom:1px solid #1f2a40;transition:background .3s}
+.ptab th{background:#111827;color:var(--muted);font-size:14.5px}
+.ptab td:first-child{text-align:left;padding-left:12px;color:#d7def0}
+.ptab tr:last-child td{border-bottom:none}
+.yes{color:var(--ok)}.no{color:var(--ng)}
+.ptab .hr td{background:rgba(196,167,255,.14)}
+.ptab .hc{background:rgba(244,208,63,.16)!important}
+.ptab td.hit{background:rgba(196,167,255,.45)!important;color:#fff;box-shadow:inset 0 0 0 2px var(--authz)}
+.ptab-cap{font-size:13.5px;font-weight:700;color:var(--muted);margin:6px 0 0}
+
+/* 処理 */
+.proc-box{border-radius:12px;background:#111827;border:1.5px solid #2a3858;padding:12px;text-align:center;margin-top:6px}
+.proc-box .pi{font-size:40px;line-height:1.2}
+.proc-box b{display:block;font-size:18px;font-weight:900;margin-top:4px}
+.proc-box small{display:block;font-size:13.5px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.5}
+.proc-st{margin-top:12px;font-size:16px;font-weight:900;color:#4d5a77;text-align:center;min-height:48px;line-height:1.5}
+.proc-st.run{color:var(--proc)}
+
+/* 結果 */
+.res{margin-top:10px;height:240px;border-radius:14px;border:2px dashed #2a3858;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-weight:900;color:#4d5a77;transition:all .35s;padding:10px}
+.res .ri{font-size:46px;line-height:1}
+.res .rc{font-family:var(--font-code);font-size:19px}
+.res .rt{font-size:16px;line-height:1.5}
+.res.ok{border-style:solid;border-color:var(--ok);color:var(--ok);background:rgba(46,230,168,.07)}
+.res.ng{border-style:solid;border-color:var(--ng);color:var(--ng);background:rgba(255,107,107,.07)}
+.res.ok .rt,.res.ng .rt{color:#d7def0}
+
+/* 動くトークン */
+.token{position:absolute;top:30px;width:46px;height:46px;margin-left:-23px;font-size:24px!important;border-radius:50%;background:#1b2538;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:28px;z-index:5;transition:left .9s var(--ease),opacity .3s,border-color .3s;box-shadow:0 0 20px rgba(255,255,255,.25)}
+.token.ng{border-color:var(--ng);box-shadow:0 0 20px rgba(255,107,107,.6)}
+.token.ok{border-color:var(--ok);box-shadow:0 0 20px rgba(46,230,168,.6)}
+
+/* ===========================================
+   CAPTION
+   =========================================== */
+.caption{position:absolute;left:90px;right:90px;top:822px;height:78px;border-radius:16px;background:linear-gradient(90deg,#161226,#0e1424);border:1.5px solid var(--line);display:flex;align-items:center;gap:18px;padding:0 26px}
+.cap-k{flex:none;font-size:18px;font-weight:900;color:#0a0e16;background:var(--ck,#eef3ff);border-radius:8px;padding:5px 12px;transition:background .3s}
+.cap-tx{font-size:23px;font-weight:700;line-height:1.4;transition:opacity .25s}
+.cap-tx b{color:var(--accent);font-weight:900}
+.cap-tx.fade{opacity:0}
+
+/* ===========================================
+   COMPARE — 認証と認可の比較
+   =========================================== */
+.cmp{position:absolute;left:90px;right:90px;top:916px;height:128px;display:flex;gap:16px}
+.cc{border-radius:16px;background:var(--panel);border:1.5px solid var(--line);padding:12px 18px}
+.cc.tbl{flex:1.7;padding:8px 14px}
+.cc.hotel{flex:1}
+.ct{width:100%;border-collapse:collapse}
+.ct th,.ct td{font-size:15px;font-weight:700;text-align:left;padding:2px 10px;line-height:1.5;border-bottom:1px solid #1f2a40}
+.ct tr:last-child th,.ct tr:last-child td{border-bottom:none}
+.ct th{color:var(--muted);font-size:14px;width:120px}
+.ct thead th{font-size:15.5px;font-weight:900}
+.ct thead th:nth-child(2){color:var(--authn)}
+.ct thead th:nth-child(3){color:var(--authz)}
+.ct code{font-family:var(--font-code);font-size:14px}
+.cc.hotel h4{font-size:17px;font-weight:900;margin-bottom:6px}
+.cc.hotel p{font-size:15.5px;font-weight:700;line-height:1.6;color:#d7def0}
+.cc.hotel b.a{color:var(--authn)}.cc.hotel b.z{color:var(--authz)}
+
+/* ===========================================
+   ENTRANCE
+   =========================================== */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.slide.visible .reveal{opacity:1;transform:none}
+.slide.visible .d1{transition-delay:.05s}.slide.visible .d2{transition-delay:.2s}
+.slide.visible .d3{transition-delay:.35s}.slide.visible .d4{transition-delay:.5s}
+
+/* ===========================================
+   INLINE EDITING
+   =========================================== */
+.edit-hotzone{position:fixed;top:0;left:0;width:80px;height:80px;z-index:10000}
+.edit-toggle{position:fixed;top:16px;left:16px;z-index:10001;width:44px;height:44px;border-radius:50%;border:1px solid #33415f;background:#141c2c;color:#fff;font-size:18px;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .25s}
+.edit-toggle.show,.edit-toggle.active{opacity:1;pointer-events:auto}
+.edit-toggle.active{background:var(--accent);color:#160d2a}
+body.editing [data-edit]{outline:1.5px dashed rgba(196,167,255,.6);outline-offset:4px}
+</style>
+</head>
+<body>
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="編集モード (E)">✏️</button>
+
+<div class="deck-viewport">
+<main class="deck-stage" id="deckStage">
+<section class="slide active visible" id="slide">
+  <div class="bg"></div>
+
+  <!-- === HEADER === -->
+  <header class="header reveal d1">
+    <div>
+      <div class="kicker" data-edit>AUTHORIZATION <span>／ 認証のあとに行うもうひとつの確認</span></div>
+      <h1 class="title" data-edit><em>認可</em>ってなに？ 認証との違い</h1>
+    </div>
+    <button class="btn" id="btnPlay">⏸ 一時停止</button>
+  </header>
+
+  <!-- === HERO === -->
+  <div class="hero reveal d2">
+    <div class="def main">
+      <div class="l"><span class="lb">ひとことで言うと</span><span class="eq">認可 ＝</span></div>
+      <p data-edit>本人とわかった人に<mark>「何をしてよいか」を決めて</mark>、<br>許可・拒否すること<small>英語で Authorization（オーソライゼーション）</small></p>
+    </div>
+    <div class="def diff">
+      <div class="l"><span class="lb">認証との違い</span></div>
+      <div class="pair">
+        <div><i style="background:var(--authn)">認証</i><span data-edit>「<b style="color:var(--authn)">だれ？</b>」を確かめる</span><span class="q">本人確認</span></div>
+        <div><i style="background:var(--authz)">認可</i><span data-edit>「<b style="color:var(--authz)">何してよい？</b>」を決める</span><span class="q">権限の確認</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- === FLOW === -->
+  <div class="flow-h reveal d3">
+    <b data-edit>例：ネットショップ管理画面で <em>「商品を削除する」</em> とき</b>
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="stagebox reveal d3" id="box">
+    <!-- ユーザー -->
+    <div class="nd n-user" id="nUser">
+      <span class="tg">利用者</span>
+      <div class="avatar" id="uAv">👩‍💼</div>
+      <div class="u-name" id="uName"></div>
+      <div class="u-role" id="uRole"></div>
+      <div class="u-want">やりたいこと<b>商品を削除</b></div>
+    </div>
+    <div class="arw" id="a1" style="left:270px">▶</div>
+
+    <!-- 認証 -->
+    <div class="nd n-authn" id="nAuthn">
+      <span class="tg">① 認証</span>
+      <h3>🪪 本人確認</h3>
+      <div class="qq">「あなたはだれ？」</div>
+      <div class="login">
+        <div class="f">ユーザーID <code id="lId"></code></div>
+        <div class="f">パスワード <code id="lPw"></code></div>
+      </div>
+      <div class="judge" id="jAuthn"><span class="big">判定待ち</span></div>
+    </div>
+    <div class="arw" id="a2" style="left:650px">▶</div>
+
+    <!-- 認可 -->
+    <div class="nd n-authz" id="nAuthz">
+      <span class="tg">② 認可</span>
+      <h3>🔐 権限チェック</h3>
+      <div class="qq">「その操作をしてよい？」</div>
+      <table class="ptab" id="ptab">
+        <tr><th>役割 ＼ 操作</th><th>商品を見る</th><th>商品を編集</th><th data-c="del">商品を削除</th></tr>
+        <tr data-r="staff"><td>スタッフ</td><td class="yes">○</td><td class="yes">○</td><td class="no" data-c="del">×</td></tr>
+        <tr data-r="admin"><td>管理者</td><td class="yes">○</td><td class="yes">○</td><td class="yes" data-c="del">○</td></tr>
+      </table>
+      <div class="ptab-cap">↑ 権限表（だれが何をしてよいかの決まり）</div>
+      <div class="judge" id="jAuthz" style="height:70px;margin-top:8px"><span class="big">判定待ち</span></div>
+    </div>
+    <div class="arw" id="a3" style="left:1150px">▶</div>
+
+    <!-- 処理 -->
+    <div class="nd n-proc" id="nProc">
+      <span class="tg">③ 処理</span>
+      <h3>⚙️ 実行</h3>
+      <div class="qq">許可されたら動く</div>
+      <div class="proc-box"><div class="pi">🗑️</div><b>商品「傘」を削除</b><small>認証と認可を<br>両方パスしたときだけ</small></div>
+      <div class="proc-st" id="pSt">待機中</div>
+    </div>
+    <div class="arw" id="a4" style="left:1450px">▶</div>
+
+    <!-- 結果 -->
+    <div class="nd n-res" id="nRes">
+      <span class="tg">結果</span>
+      <div class="res" id="res"><span class="ri">⏳</span><span class="rt">結果待ち</span></div>
+    </div>
+
+    <div class="token" id="token">👩‍💼</div>
+  </div>
+
+  <!-- === CAPTION === -->
+  <div class="caption reveal d4"><span class="cap-k" id="capK">開始</span><span class="cap-tx" id="capTx"></span></div>
+
+  <!-- === COMPARE === -->
+  <div class="cmp reveal d4">
+    <div class="cc tbl">
+      <table class="ct">
+        <thead><tr><th></th><th>認証（Authentication）</th><th>認可（Authorization）</th></tr></thead>
+        <tr><th>確かめること</th><td>本人かどうか</td><td>その操作をしてよいか</td></tr>
+        <tr><th>順番</th><td>先に行う</td><td>認証のあとに行う</td></tr>
+        <tr><th>失敗すると</th><td>ログインできない <code style="color:var(--ng)">401</code></td><td>操作できない <code style="color:var(--ng)">403</code></td></tr>
+      </table>
+    </div>
+    <div class="cc hotel">
+      <h4>🏨 ホテルでたとえると</h4>
+      <p data-edit><b class="a">認証</b>：フロントで名前と予約を確認する<br><b class="z">認可</b>：渡されたカードキーで<b>入れる部屋が決まる</b></p>
+    </div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+/* ===========================================
+   STAGE SCALING
+   =========================================== */
+const stage = document.getElementById('deckStage');
+function fit(){
+  const f = Math.min(innerWidth/1920, innerHeight/1080);
+  stage.style.transform = `translate(${(innerWidth-1920*f)/2}px,${(innerHeight-1080*f)/2}px) scale(${f})`;
+}
+fit(); addEventListener('resize', fit);
+const $ = id => document.getElementById(id);
+
+/* ===========================================
+   SCENARIOS — 3人のユーザー（文言はここで編集）
+   =========================================== */
+const SC = [
+  { tab:'佐藤さん', sub:'管理者', av:'👨‍💼', name:'佐藤さん', role:'役割：管理者', role_k:'admin', id:'sato', pw:'●●●●●●', authn:true, authz:true,
+    caps:['佐藤さんが「商品を削除」しようとしています。',
+          '<b>認証</b>：IDとパスワードが正しい → 本人（佐藤さん）と確認できました。',
+          '<b>認可</b>：権限表を見ると「管理者」は削除 ○ → <b>許可</b>！',
+          '処理が実行され、商品が削除されました。認証も認可も OK のときだけ実行されます。'],
+    res:['ok','✅','200 OK','削除できました'] },
+  { tab:'田中さん', sub:'スタッフ', av:'👩‍💼', name:'田中さん', role:'役割：スタッフ', role_k:'staff', id:'tanaka', pw:'●●●●●●', authn:true, authz:false,
+    caps:['田中さんが「商品を削除」しようとしています。',
+          '<b>認証</b>：IDとパスワードが正しい → 本人（田中さん）と確認できました。',
+          '<b>認可</b>：権限表を見ると「スタッフ」は削除 × → <b>拒否</b>！ 本人でも、権限がない操作はできません。',
+          '処理は実行されません。ログインはできても「してよいこと」は役割で決まります。'],
+    res:['ng','🚫','403 Forbidden','権限がありません'] },
+  { tab:'なりすまし', sub:'パスワード間違い', av:'🕵️', name:'？？？', role:'田中さんのIDを悪用', role_k:null, id:'tanaka', pw:'●●●●', authn:false, authz:false,
+    caps:['だれかが田中さんのIDで「商品を削除」しようとしています。',
+          '<b>認証</b>：パスワードが違う → 本人と確認できない！ ここで止められます。',
+          '認証に失敗したので、<b>認可</b>の確認まで進みません。',
+          '処理は実行されません。「だれか分からない人」には何もさせません。'],
+    res:['ng','🔒','401 Unauthorized','ログインが必要です'] }
+];
+
+SC.forEach((s, i) => {
+  const t = document.createElement('div'); t.className = 'tab';
+  t.innerHTML = `${s.av} ${s.tab}<small>${s.sub}</small>`;
+  t.onclick = () => run(i);
+  $('tabs').appendChild(t);
+});
+
+/* ===========================================
+   ANIMATION
+   =========================================== */
+let token = 0, cur = 0, playing = true;
+const sleep = (ms, t) => new Promise((res, rej) => setTimeout(() => t === token ? res() : rej('stop'), ms));
+const X = { user:236, authn:616, authz:1116, proc:1416, res:1686 };   // トークンの位置（枠内）
+function moveTok(k){ $('token').style.left = X[k] + 'px'; }
+function act(id){ ['nUser','nAuthn','nAuthz','nProc','nRes'].forEach(n => $(n).classList.toggle('act', n === id)); }
+function arrows(n){ ['a1','a2','a3','a4'].forEach((a, i) => $(a).classList.toggle('on', i < n)); }
+function cap(k, color, html){
+  $('capK').textContent = k; $('capK').parentElement.style.setProperty('--ck', color);
+  const tx = $('capTx'); tx.classList.add('fade');
+  setTimeout(() => { tx.innerHTML = html; tx.classList.remove('fade'); }, 180);
+}
+function judge(id, cls, big, small){
+  const j = $(id); j.className = 'judge' + (cls ? ' ' + cls : '');
+  j.innerHTML = `<span class="big">${big}</span>` + (small ? `<small>${small}</small>` : '');
+}
+function clearTable(){ document.querySelectorAll('#ptab .hr, #ptab .hc, #ptab .hit').forEach(e => e.classList.remove('hr','hc','hit')); }
+function reset(s){
+  $('uAv').textContent = s.av; $('token').textContent = s.av;
+  $('uName').textContent = s.name; $('uRole').textContent = s.role;
+  $('lId').textContent = ''; $('lPw').textContent = '';
+  judge('jAuthn', '', '判定待ち'); judge('jAuthz', '', '判定待ち');
+  $('pSt').className = 'proc-st'; $('pSt').textContent = '待機中';
+  const r = $('res'); r.className = 'res'; r.innerHTML = '<span class="ri">⏳</span><span class="rt">結果待ち</span>';
+  ['nAuthz','nProc'].forEach(n => $(n).classList.remove('skip'));
+  clearTable(); arrows(0); act('nUser');
+  $('token').className = 'token'; moveTok('user');
+}
+async function type(id, text, t){ $(id).textContent = ''; for (const ch of text){ $(id).textContent += ch; await sleep(80, t); } }
+
+async function run(i){
+  const t = ++token; cur = i; const s = SC[i];
+  [...$('tabs').children].forEach((el, j) => el.classList.toggle('on', j === i));
+  try{
+    reset(s); cap('開始', '#eef3ff', s.caps[0]); await sleep(1600, t);
+
+    // ① 認証
+    arrows(1); moveTok('authn'); act('nAuthn'); await sleep(900, t);
+    cap('① 認証', 'var(--authn)', s.caps[1]);
+    await type('lId', s.id, t); await type('lPw', s.pw, t); await sleep(500, t);
+    if (s.authn){ judge('jAuthn', 'ok', '✔ 本人確認OK', `${s.name}（${s.role.replace('役割：','')}）`); }
+    else {
+      judge('jAuthn', 'ng', '✖ 本人確認NG', 'パスワードが違います <span class="code">401</span>');
+      $('token').classList.add('ng');
+      await sleep(2200, t);
+      cap('② 認可', 'var(--authz)', s.caps[2]);
+      $('nAuthz').classList.add('skip'); $('nProc').classList.add('skip');
+      judge('jAuthz', '', '— 確認しない —');
+      await sleep(2200, t);
+      arrows(0); moveTok('res'); act('nRes');
+      showRes(s); cap('結果', 'var(--ng)', s.caps[3]);
+      await sleep(4200, t); return next(t);
+    }
+    await sleep(2000, t);
+
+    // ② 認可
+    arrows(2); moveTok('authz'); act('nAuthz'); await sleep(900, t);
+    cap('② 認可', 'var(--authz)', s.caps[2]);
+    document.querySelector(`#ptab tr[data-r="${s.role_k}"]`).classList.add('hr'); await sleep(700, t);
+    document.querySelectorAll('#ptab [data-c="del"]').forEach(c => c.classList.add('hc')); await sleep(700, t);
+    document.querySelector(`#ptab tr[data-r="${s.role_k}"] td[data-c="del"]`).classList.add('hit'); await sleep(600, t);
+    if (s.authz){ judge('jAuthz', 'ok', '✔ 許可', ''); $('token').classList.add('ok'); }
+    else {
+      judge('jAuthz', 'ng', '✖ 拒否', '削除の権限がありません <span class="code">403</span>');
+      $('token').classList.add('ng'); await sleep(2400, t);
+      $('nProc').classList.add('skip'); $('pSt').textContent = '実行しない';
+      arrows(0); moveTok('res'); act('nRes'); showRes(s); cap('結果', 'var(--ng)', s.caps[3]);
+      await sleep(4200, t); return next(t);
+    }
+    await sleep(1800, t);
+
+    // ③ 処理
+    arrows(3); moveTok('proc'); act('nProc'); await sleep(900, t);
+    $('pSt').className = 'proc-st run'; $('pSt').textContent = '削除しています…'; await sleep(1200, t);
+    $('pSt').textContent = '✔ 削除完了';
+    arrows(4); moveTok('res'); act('nRes'); await sleep(700, t);
+    showRes(s); cap('結果', 'var(--ok)', s.caps[3]);
+    await sleep(4200, t); next(t);
+  }catch(e){ /* 中断 */ }
+}
+function showRes(s){
+  const [cls, ic, code, tx] = s.res, r = $('res');
+  r.className = 'res ' + cls;
+  r.innerHTML = `<span class="ri">${ic}</span><span class="rc">${code}</span><span class="rt">${tx}</span>`;
+}
+function next(t){ if (playing && t === token) run((cur + 1) % SC.length); }
+function setPlaying(v){
+  playing = v; $('btnPlay').textContent = v ? '⏸ 一時停止' : '▶ 再生';
+  if (v) run((cur + 1) % SC.length); else token++;
+}
+$('btnPlay').onclick = () => setPlaying(!playing);
+addEventListener('keydown', e => {
+  if (document.body.classList.contains('editing')) return;
+  if (e.key === ' '){ e.preventDefault(); setPlaying(!playing); }
+  if (e.key === 'ArrowRight') run((cur + 1) % SC.length);
+  if (e.key === 'ArrowLeft') run((cur - 1 + SC.length) % SC.length);
+});
+
+/* ===========================================
+   INLINE EDITING（E キー or 左上ホバー、Ctrl+S で保存）
+   =========================================== */
+(function(){
+  const hz = $('editHotzone'), bt = $('editToggle'); let hide;
+  const sh = () => { clearTimeout(hide); bt.classList.add('show'); };
+  const later = () => { hide = setTimeout(() => bt.classList.remove('show'), 400); };
+  hz.addEventListener('mouseenter', sh); hz.addEventListener('mouseleave', later);
+  bt.addEventListener('mouseenter', sh); bt.addEventListener('mouseleave', later);
+  const toggle = () => {
+    const on = document.body.classList.toggle('editing');
+    bt.classList.toggle('active', on);
+    document.querySelectorAll('[data-edit], .ct td').forEach(el => el.contentEditable = on);
+  };
+  bt.onclick = toggle;
+  addEventListener('keydown', e => {
+    const ed = document.activeElement && document.activeElement.isContentEditable;
+    if ((e.key === 'e' || e.key === 'E') && !ed) toggle();
+    if ((e.ctrlKey || e.metaKey) && e.key === 's'){
+      e.preventDefault();
+      const blob = new Blob(['<!DOCTYPE html>\n' + document.documentElement.outerHTML], {type:'text/html'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'authorization.html'; a.click();
+    }
+  });
+})();
+
+/* 起動：まず「田中さん（拒否）」から見せると違いが分かりやすい */
+reset(SC[1]);
+setTimeout(() => run(1), 900);
+</script>
+</body>
+</html>
