@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>美味しいコーヒーの淹れ方</title>
+<style>
+  :root {
+    --coffee: #68452f;
+    --coffee-dark: #38271e;
+    --cream: #f7f1e8;
+    --paper: #fffdf9;
+    --accent: #b78355;
+    --text: #332820;
+    --muted: #76685c;
+    --line: #e6d9ca;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    color: var(--text);
+    background: var(--cream);
+    font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    line-height: 1.75;
+  }
+  main { width: min(760px, 100%); margin: 0 auto; padding: 24px 18px 48px; }
+  header {
+    background: linear-gradient(145deg, #78533a, #4a3022);
+    color: #fffaf3;
+    padding: 34px 26px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  header .eyebrow { font-size: .78rem; letter-spacing: .15em; opacity: .8; margin: 0 0 8px; }
+  h1 { margin: 0; font-size: clamp(1.55rem, 6vw, 2.15rem); line-height: 1.4; }
+  header p { margin: 10px 0 0; color: #e9d9c8; }
+  section {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 22px;
+    margin: 16px 0;
+  }
+  h2 { margin: 0 0 16px; color: var(--coffee); font-size: 1.15rem; }
+  .recipe {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  }
+  .recipe-item {
+    background: #f2e6d8; border-radius: 12px; text-align: center; padding: 14px 10px;
+  }
+  .recipe-item strong { display: block; color: var(--coffee-dark); font-size: 1.45rem; }
+  .recipe-item span { color: var(--muted); font-size: .88rem; }
+  ol { margin: 0; padding-left: 1.4em; }
+  li { padding: 4px 0 7px; }
+  li::marker { color: var(--accent); font-weight: 700; }
+  .note {
+    border-left: 3px solid var(--accent); background: #fbf5ed;
+    padding: 12px 14px; border-radius: 0 10px 10px 0; color: var(--muted); font-size: .93rem;
+  }
+  .tips { list-style: none; padding: 0; margin: 0; }
+  .tips li { padding: 8px 0; border-bottom: 1px solid #eee5db; }
+  .tips li:last-child { border-bottom: 0; }
+  .tips li::before { content: "•"; color: var(--accent); font-weight: 900; margin-right: .65em; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 12px 8px; }
+  @media (max-width: 420px) {
+    main { padding: 16px 12px 36px; }
+    header, section { padding: 20px; }
+    .recipe { gap: 8px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">COFFEE BREWING GUIDE</p>
+    <h1>美味しいコーヒーの淹れ方</h1>
+    <p>毎日の1杯を、少しだけ美味しく。</p>
+  </header>
+
+  <section aria-labelledby="recipe-title">
+    <h2 id="recipe-title">01｜基本のレシピ（1杯分）</h2>
+    <div class="recipe">
+      <div class="recipe-item"><strong>15g</strong><span>コーヒー豆</span></div>
+      <div class="recipe-item"><strong>240ml</strong><span>お湯（豆：湯＝1：16）</span></div>
+      <div class="recipe-item"><strong>90〜93℃</strong><span>湯温の目安</span></div>
+      <div class="recipe-item"><strong>中挽き</strong><span>挽き目</span></div>
+    </div>
+    <p class="note">まずはこの比率を基準に。濃さや味の好みに合わせて、豆やお湯の量を調整しましょう。</p>
+  </section>
+
+  <section aria-labelledby="steps-title">
+    <h2 id="steps-title">02｜淹れる手順</h2>
+    <ol>
+      <li>ドリッパーとカップをお湯で温める。</li>
+      <li>豆を挽き、フィルターにセットする。</li>
+      <li>少量のお湯（約30ml）を注ぎ、30秒蒸らす。</li>
+      <li>中心から円を描くように、数回に分けてゆっくり注ぐ。</li>
+      <li>抽出時間が約2〜3分を目安に終わったら、軽く混ぜて完成。</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="tips-title">
+    <h2 id="tips-title">03｜美味しくするコツ</h2>
+    <ul class="tips">
+      <li>豆は淹れる直前に挽くと、香りを楽しみやすい。</li>
+      <li>注ぐ量と速度をなるべく安定させる。</li>
+      <li>抽出後に軽く混ぜると、味が均一になりやすい。</li>
+      <li>酸味が強すぎるなら少し細かく、苦味が強すぎるなら少し粗く挽くなど調整する。</li>
+    </ul>
+  </section>
+
+  <footer>少しずつ調整して、自分好みの1杯を見つけましょう。</footer>
+</main>
+</body>
+</html>
