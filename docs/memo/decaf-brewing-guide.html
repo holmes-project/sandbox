@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>デカフェを美味しく淹れる | 抽出ガイド</title>
+<style>
+:root{--ink:#38271d;--muted:#766458;--cream:#fbf7f0;--paper:#fffdf9;--coffee:#65432e;--tan:#e9d8c2;--line:#eadfce;--green:#526b52;--orange:#a65b35}
+*{box-sizing:border-box}
+body{margin:0;background:var(--cream);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.75}
+header{background:linear-gradient(135deg,#4a3022,#805b40);color:#fff;padding:56px 20px 48px;text-align:center}
+header .eyebrow{letter-spacing:.14em;font-size:.8rem;color:#e7d4bf}
+h1{font-size:clamp(1.8rem,5vw,3rem);line-height:1.3;margin:.5rem 0}
+header p{margin:.6rem auto 0;max-width:650px;color:#f3e5d7}
+main{width:min(100% - 32px,900px);margin:28px auto 60px}
+section{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:clamp(20px,4vw,34px);margin:22px 0;box-shadow:0 4px 18px #4a30220a}
+h2{font-size:1.35rem;margin:0 0 18px;display:flex;align-items:center;gap:10px}
+h2 .num{background:var(--coffee);color:white;border-radius:50%;width:32px;height:32px;display:grid;place-items:center;font-size:.9rem;flex:none}
+h3{font-size:1.04rem;margin:0 0 8px}
+p{margin:.5rem 0}
+.small{color:var(--muted);font-size:.9rem}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#f3eadf;font-size:.9rem}
+tbody tr:last-child td{border-bottom:0}
+.note{background:#f5eee4;border-left:4px solid var(--coffee);padding:12px 15px;border-radius:10px;margin-top:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tip{border:1px solid var(--line);border-radius:15px;padding:17px;background:#fff}
+.tip .icon{font-size:1.5rem;margin-bottom:5px}
+.recipe-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#f3eadf;border-radius:14px;text-align:center;padding:14px 8px}
+.metric strong{display:block;font-size:1.4rem;color:var(--coffee)}
+.metric span{font-size:.83rem;color:var(--muted)}
+.steps{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin:18px 0}
+.step{flex:1 1 120px;text-align:center;border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px}
+.arrow{align-self:center;color:var(--orange);font-weight:700}
+.flow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.flow-card{border-radius:15px;padding:18px;border:1px solid var(--line)}
+.flow-card h3{display:flex;align-items:center;gap:8px}
+.flow-card.acid{background:#eef4eb}
+.flow-card bitter{background:#f7eee6}
+ul{padding-left:1.25rem;margin:.5rem 0}
+li{margin:.35rem 0}
+footer{text-align:center;padding:25px;color:var(--muted);font-size:.85rem}
+@media(max-width:620px){.recipe-grid{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.arrow{display:none}th,td{padding:9px 8px;font-size:.92rem}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">POUR-OVER GUIDE</div>
+  <h1>デカフェを美味しく淹れる</h1>
+  <p>ちょっとした調整で、香りと味わいを楽しむ。<br>抽出のコツ・基本レシピ・味の整え方。</p>
+</header>
+<main>
+<section>
+<h2><span class="num">1</span>普通のコーヒーとデカフェの違い</h2>
+<p>抽出の基本は同じ。デカフェは処理方法や豆の状態によって抽出特性が変わることがあるため、味を見ながら条件を調整します。</p>
+<table>
+<thead><tr><th>項目</th><th>普通のコーヒー</th><th>デカフェ（出発点）</th></tr></thead>
+<tbody>
+<tr><td>湯温</td><td>90～96℃</td><td>88～94℃程度から試す</td></tr>
+<tr><td>挽き目</td><td>中挽きが目安</td><td>中挽き。同じか少し粗めを試す</td></tr>
+<tr><td>抽出時間</td><td>約2分30秒～3分</td><td>約2分～2分45秒を目安に調整</td></tr>
+<tr><td>調整の考え方</td><td>豆に合わせてバランスを取る</td><td>過抽出を避けつつ、十分な濃度を確保</td></tr>
+</tbody></table>
+<p class="small">※数値は目安です。焙煎度、豆、ドリッパー、脱カフェイン処理によって最適条件は異なります。</p>
+</section>
+
+<section>
+<h2><span class="num">2</span>美味しく淹れるための5つの注意点</h2>
+<div class="cards">
+<div class="tip"><div class="icon">🌡️</div><h3>湯温は味に合わせる</h3><p>まずは88～92℃程度。苦味や渋みが目立つときは温度を下げ、酸っぱく薄いときは少し上げてみます。</p></div>
+<div class="tip"><div class="icon">⚙️</div><h3>挽き目を調整する</h3><p>中挽きからスタート。苦味や渋みが強ければ粗め、酸っぱく薄ければ細かめを試します。</p></div>
+<div class="tip"><div class="icon">💧</div><h3>蒸らしは均一に</h3><p>粉全体を湿らせるように注ぎ、30～40秒程度蒸らします。長くすればよいとは限りません。</p></div>
+<div class="tip"><div class="icon">🫖</div><h3>注湯は穏やかに</h3><p>勢いよく攪拌しすぎず、安定して注ぎます。流速が変わりすぎないよう意識します。</p></div>
+<div class="tip"><div class="icon">📦</div><h3>香りと鮮度を守る</h3><p>豆の状態で密閉し、熱・光・湿気を避けて保存。できるだけ淹れる直前に挽きます。</p></div>
+</div>
+<div class="note"><strong>ポイント：</strong>デカフェだから必ず低温・粗挽きにするのではなく、豆の味と抽出の様子を基準に調整しましょう。</div>
+</section>
+
+<section>
+<h2><span class="num">3</span>基本レシピ（ハンドドリップ・1杯）</h2>
+<div class="recipe-grid">
+<div class="metric"><strong>15g</strong><span>コーヒー豆</span></div>
+<div class="metric"><strong>240g</strong><span>お湯</span></div>
+<div class="metric"><strong>90℃</strong><span>湯温</span></div>
+<div class="metric"><strong>2:30–3:00</strong><span>抽出時間</span></div>
+</div>
+<h3 style="margin-top:22px">抽出の流れ</h3>
+<div class="steps" aria-label="抽出工程の図">
+<div class="step"><strong>① 蒸らす</strong><br>30g注ぐ<br><span class="small">30～40秒</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="step"><strong>② 1回目</strong><br>約60g注ぐ</div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="step"><strong>③ 2回目</strong><br>残りを注ぐ<br><span class="small">合計240g</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="step"><strong>④ 完了</strong><br>抽出終了を確認<br><span class="small">約2:30～3:00</span></div>
+</div>
+<svg viewBox="0 0 720 230" role="img" aria-label="ドリッパー内の粉にお湯を注ぎ、抽出液がカップに落ちる模式図" style="width:100%;max-width:720px;display:block;margin:10px auto">
+<defs><linearGradient id="coffee" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c69b6d"/><stop offset="1" stop-color="#6b442c"/></linearGradient></defs>
+<path d="M210 45 L510 45 L455 155 L265 155 Z" fill="#f2e5d5" stroke="#65432e" stroke-width="4"/>
+<path d="M245 82 L475 82 L445 135 L275 135 Z" fill="#68452f"/>
+<path d="M270 138 L450 138 L435 160 L285 160 Z" fill="#b58b61" opacity=".8"/>
+<path d="M360 155 L360 185" stroke="#65432e" stroke-width="5" stroke-linecap="round"/>
+<path d="M325 185 Q360 215 395 185" fill="none" stroke="#65432e" stroke-width="4"/>
+<path d="M290 28 Q350 45 410 28" fill="none" stroke="#9b6a42" stroke-width="8" stroke-linecap="round"/>
+<path d="M360 30 L360 65" stroke="#9b6a42" stroke-width="5" stroke-linecap="round"/>
+<circle cx="360" cy="72" r="5" fill="#b98150"/>
+<text x="90" y="65" font-size="18" fill="#38271d">お湯を注ぐ</text><path d="M160 70 L250 85" stroke="#9b6a42" stroke-width="2"/>
+<text x="500" y="115" font-size="18" fill="#38271d">コーヒー粉</text><path d="M490 120 L455 120" stroke="#9b6a42" stroke-width="2"/>
+<text x="420" y="205" font-size="18" fill="#38271d">抽出液</text><path d="M415 195 L390 188" stroke="#9b6a42" stroke-width="2"/>
+</svg>
+<p class="small">図は仕組みを示す簡略模式図です。注湯回数・流速はドリッパーに合わせて調整してください。</p>
+</section>
+
+<section>
+<h2><span class="num">4</span>味に応じた調整</h2>
+<p>抽出後の味を確認し、まずは一つの条件だけ変えて再度試します。</p>
+<div class="flow">
+<div class="flow-card acid"><h3>☀️ 酸っぱい・薄い</h3><ul><li>少し細かく挽く</li><li>湯温を上げる</li><li>抽出時間を延ばす</li></ul><p class="small">抽出を少し進める方向へ。</p></div>
+<div class="flow-card bitter" style="background:#f7eee6"><h3>🌰 苦い・渋い</h3><ul><li>少し粗く挽く</li><li>湯温を下げる</li><li>抽出時間を短くする</li></ul><p class="small">抽出を抑える方向へ。</p></div>
+</div>
+<table>
+<thead><tr><th>味の状態</th><th>調整のヒント</th></tr></thead>
+<tbody>
+<tr><td>味がぼんやり</td><td>豆を増やす、湯量を減らすなど濃度を調整</td></tr>
+<tr><td>雑味が多い</td><td>粗めに挽く、注湯を穏やかにする、抽出を短くする</td></tr>
+</tbody></table>
+<div class="note"><strong>調整のコツ：</strong>挽き目・湯温・抽出時間を一度に変えず、一つずつ変えると原因を判断しやすくなります。</div>
+</section>
+
+<section>
+<h2><span class="num">5</span>覚えておきたいこと</h2>
+<ul>
+<li>デカフェでも抽出の基本は普通のコーヒーと同じ。</li>
+<li>低温・粗挽きが常に正解ではなく、豆に合わせる。</li>
+<li>蒸らしでは粉全体を均一に湿らせる。</li>
+<li>保存と挽くタイミングも香りに影響する。</li>
+<li>味を見て、一つずつ条件を調整する。</li>
+</ul>
+<p style="text-align:center;font-size:1.1rem;font-weight:700;color:var(--coffee)">基本レシピから始めて、自分好みの一杯へ。</p>
+</section>
+</main>
+<footer>Decaf Brewing Guide · 自宅で楽しむハンドドリップ</footer>
+</body>
+</html>
